@@ -26,9 +26,9 @@ COPY --from=build /app/target/*.jar app.jar
 EXPOSE 8080
 
 # A protected route answering 401 proves the application is SERVING, not merely that the port
-# is open - so the check accepts 401 as readily as 200 and deliberately avoids `curl -f`.
+# is open - so the check accepts 401 as readily as 200. busybox wget is what this image has;
+# it exits non-zero on a 401, but the pipeline's status is grep's, so the check still passes.
 HEALTHCHECK --interval=5s --timeout=3s --retries=40 \
-  CMD wget -q -O /dev/null --server-response http://127.0.0.1:8080/api/me 2>&1 \
-      | grep -qE ' (401|200) ' || exit 1
+  CMD wget -q -S -O /dev/null http://127.0.0.1:8080/api/me 2>&1 | grep -qE ' (401|200) ' || exit 1
 
 ENTRYPOINT ["java", "-jar", "/app/app.jar"]

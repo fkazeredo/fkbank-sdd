@@ -11,7 +11,11 @@ if(-not(Test-Path "$root/compose.e2e.yaml") -or -not(Test-Path "$root/frontend/p
 New-Item -ItemType Directory -Force $art|Out-Null
 $code=0
 try{
-  docker compose -f "$root/compose.e2e.yaml" up -d --wait
+  # --build is not optional: `up` reuses an existing image, so without it a developer machine
+  # that already has an image from an earlier commit verifies THAT image and reports PASS. CI
+  # never sees this because it starts with an empty image store, which is exactly what makes
+  # the failure mode expensive - it only ever bites locally, and it looks like a green run.
+  docker compose -f "$root/compose.e2e.yaml" up -d --wait --build
   if($LASTEXITCODE -ne 0){throw 'E2E stack failed'}
   Push-Location "$root/frontend"
   try{

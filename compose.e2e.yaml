@@ -30,9 +30,17 @@ services:
         condition: service_healthy
     healthcheck:
       # Point this at a route that proves the app is SERVING, not that it is open. A protected
-      # route answering 401 is a perfectly good liveness signal — hence `grep -qE '401|200'`
-      # and no `curl -f`, which would treat the 401 as an error.
-      test: ["CMD-SHELL", "curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/api/me | grep -qE '401|200'"]
+      # route answering 401 is a perfectly good liveness signal — hence `grep -qE ' (401|200) '`
+      # and no `wget -f`-style failure on the 401, which would treat it as an error.
+      #
+      # busybox `wget`, not `curl`: the runtime image is JRE-on-Alpine and ships no curl, so a
+      # curl-based check fails with "curl: not found" and reports the application unhealthy
+      # while it is serving perfectly. wget exits non-zero on a 401, but the pipeline's status
+      # is grep's, so the check still passes.
+      #
+      # 127.0.0.1, never `localhost`: inside the container localhost resolves to IPv6 ::1
+      # first, where the server is not listening.
+      test: ["CMD-SHELL", "wget -q -S -O /dev/null http://127.0.0.1:8080/api/me 2>&1 | grep -qE ' (401|200) '"]
       interval: 5s
       timeout: 3s
       retries: 40
