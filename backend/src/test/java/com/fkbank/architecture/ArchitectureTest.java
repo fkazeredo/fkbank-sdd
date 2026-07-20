@@ -155,6 +155,31 @@ class ArchitectureTest {
           .haveSimpleNameEndingWith("Impl")
           .because("domain types carry ubiquitous-language names, not technical role names");
 
+  /**
+   * Balances belong to the ledger and to nothing else.
+   *
+   * <p>The moment a second module can read or write a balance directly, "can this account afford
+   * it" has two implementations, and the day they disagree is the day money is created. Other
+   * modules ask the ledger for a movement; only its own persistence adapter touches the stored
+   * figure.
+   *
+   * <p>Bean wiring is exempt because it names the port in a constructor argument without ever
+   * calling it: assembling the ledger is not using it. The exemption is the composition package
+   * alone, so a module that wants a balance still has to go through the ledger.
+   */
+  @ArchTest
+  static final ArchRule onlyTheLedgerTouchesBalances =
+      noClasses()
+          .that()
+          .resideOutsideOfPackages(
+              "com.fkbank.domain.ledger..",
+              "com.fkbank.infra.persistence.ledger..",
+              "com.fkbank.infra.configuration..")
+          .should()
+          .dependOnClassesThat()
+          .haveNameMatching(".*\\.Balance(Entity|Repository|JpaRepository)?")
+          .because("no module outside the ledger may read or write a balance");
+
   private static ArchCondition<JavaClass> beDirectlyInsideABoundedContext() {
     return new ArchCondition<>("reside directly in com.fkbank.domain.<bounded-context>") {
       @Override
