@@ -2,7 +2,7 @@
 id: SPEC-0016
 title: Observability baseline
 slug: observability-baseline
-status: AWAITING_SPEC_APPROVAL
+status: READY
 risk: R2
 profile: standard
 modules: [application, infra]
@@ -13,8 +13,8 @@ reading_list:
   architecture: ["Observability", "Stack"]
 planned_sprint: S1
 planned_release: null
-owner_approved_at: null
-owner_approved_hash: null
+owner_approved_at: 2026-07-20T08:48:16Z
+owner_approved_hash: 4fec593f77cee9b39b6d0b211d9ab0b348f4c0e36676c0f390d2ec2abb1b7302
 split_review_required: true
 ---
 
@@ -135,6 +135,9 @@ Format: `DL-NNNN — YYYY-MM-DD — decision — decided by <owner|architecture|
   the owner when `/deliver-spec SPEC-0016` found an empty repository; `depends_on` now
   lists SPEC-0018 — decided by owner. (Numbered past DL-0008, which the roadmap cites from
   the previous repository's decision history.)
+- DL-0010 — 2026-07-20T08:48:16Z — `/deliver-spec SPEC-0016` approved for delivery at content
+  hash `4fec593f77cee9b39b6d0b211d9ab0b348f4c0e36676c0f390d2ec2abb1b7302`, its `depends_on`
+  (SPEC-0018) now IMPLEMENTED — decided by owner (franklin.azeredo).
 
 ## Traceability
 
