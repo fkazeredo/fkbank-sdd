@@ -20,6 +20,11 @@ try{
   Push-Location "$root/frontend"
   try{
     if(-not(Test-Path node_modules)){npm ci;if($LASTEXITCODE -ne 0){throw 'npm ci failed'}}
+    # Playwright ships no browser with the npm package; without this the suite fails with
+    # "Executable doesn't exist" before reaching the application. Idempotent once installed.
+    # No --with-deps here: that flag only supports Debian/Ubuntu, and this is the Windows path.
+    npx playwright install chromium
+    if($LASTEXITCODE -ne 0){throw 'playwright install failed'}
     npm run -s e2e
     if($LASTEXITCODE -ne 0){throw 'Playwright failed'}
   }finally{Pop-Location}

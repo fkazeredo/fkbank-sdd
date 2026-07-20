@@ -9,5 +9,9 @@ cleanup(){ docker compose -f "$ROOT/compose.e2e.yaml" down -v >"$ART/docker-down
 # because it starts with an empty image store, which is what makes the failure mode expensive -
 # it only bites locally, and it looks like a green run.
 timeout 600 docker compose -f "$ROOT/compose.e2e.yaml" up -d --wait --build >"$ART/docker-up.log" 2>&1
+# Playwright ships no browser with the npm package, and a fresh CI runner has none cached, so
+# the suite fails with "Executable doesn't exist" before it ever reaches the application. The
+# install is idempotent and near-instant once the browser is present.
+( cd "$ROOT/frontend" && timeout 600 npx playwright install --with-deps chromium ) >"$ART/playwright-install.log" 2>&1
 (cd "$ROOT/frontend" && { [ -d node_modules ] || npm ci; } && timeout 900 npm run -s e2e)
 echo 'verify-e2e: PASS'

@@ -10,7 +10,16 @@ RUN npm ci
 COPY . .
 RUN npm run build
 
-FROM nginx:1.29-alpine AS runtime
+# The unprivileged nginx image rather than the stock one: it is built to run as a normal user,
+# with the cache, pid and log paths already owned by that user. Hand-patching those permissions
+# onto the root image is the usual alternative and it breaks quietly on upgrades.
+# Port 8090 is above 1024, so no privileged bind is needed.
+FROM nginxinc/nginx-unprivileged:1.29-alpine AS runtime
+
+# Declared explicitly even though the base image already sets it: a container escape should not
+# begin as root, and the supply-chain scanner checks this Dockerfile rather than the base image.
+USER 101
+
 COPY --from=build /app/dist/fkbank/browser /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
