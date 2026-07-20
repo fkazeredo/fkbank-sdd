@@ -75,6 +75,30 @@ ships the mandatory race test but no idempotency-replay test. ASSUMED (DL-0007).
 Migrations: `account`, `posting`, `balance` · Events: `PostingRecorded` · Contract: none ·
 Screens: none · Emulator: none
 
+## Traceability
+
+| Acceptance criterion | Tests |
+|---|---|
+| Posting moves both balances; each equals Σ of its postings; Σ debits = Σ credits | `LedgerPostingIT.movesMoneyAndKeepsTheBooksBalanced`, `.recordsBothLegs`, `.allowsDrainingToZero` |
+| Debit below zero on a customer account ⇒ `INSUFFICIENT_FUNDS`, nothing written | `LedgerPostingIT.refusesToOverdrawAndWritesNothing` · `BalanceTest` (8 cases) · schema `posting_amount_positive` |
+| Reversal writes a contra referencing the original; balances restored; original immutable | `LedgerReversalIT.reversalRestoresBothBalances`, `.originalPostingStaysImmutable` · `LedgerSchemaIT.refusesToUpdateAPosting`, `.refusesToDeleteAPosting` |
+| Race under real PostgreSQL with `FOR UPDATE` in ascending id order | `LedgerConcurrencyIT.exactlyOneOfTwoConcurrentDrainsCommits`, `.opposingTransfersDoNotDeadlock` |
+| Verification routine flags a tampered balance and none on a clean ledger | `LedgerVerificationIT` (3 cases) · `TrialBalanceTest` (5 cases) |
+| jqwik on `Money`: edge rounding half-up, 4 internal decimals, N-way split sums back | `MoneyPropertiesTest` (7 properties) · `MoneyTest` (15 cases) |
+| BR-6 — reversal at most once, never a reversal of a reversal | `LedgerReversalIT.refusesASecondReversal`, `.refusesToReverseAReversal`, `.reversalIsSubjectToTheSignRule` · `PostingTest.refusesToReverseAReversal` · `LedgerSchemaIT.refusesASecondReversal` (partial unique index) |
+| M5 — no balance access outside the ledger | `ArchitectureTest.onlyTheLedgerTouchesBalances` |
+
+Backend tests live under `backend/src/test/java/com/fkbank/domain/ledger/` except
+`LedgerSchemaIT` (`infra/persistence/ledger/`), `ArchitectureTest` (`architecture/`) and the
+updated `FlywayBaselineIT` (`infra/persistence/`). This slice adds no route and no screen, so it
+has no frontend or user-manual surface.
+
+**Lock proven by deliberate mutation.** With `@Lock(PESSIMISTIC_WRITE)` removed,
+`exactlyOneOfTwoConcurrentDrainsCommits` fails with `[COMMITTED, COMMITTED]` (a double spend)
+and `opposingTransfersDoNotDeadlock` fails with a lost update (`BRL 125.0000` where `BRL
+85.0000` is correct). Restored before commit; the race test passes because of the lock, not
+alongside it.
+
 ## Decision log
 
 - DL-0004 — Event publication uses the Spring Modulith JPA event registry as the outbox base
@@ -86,3 +110,20 @@ Screens: none · Emulator: none
 - DL-0010 — 2026-07-20 — Delivery approved against spec content hash
   `cd29e975d28c191d6e593a6e4d8aae9705ee89e22db252010af2f8ab653a61e4` at
   2026-07-20T11:48:05Z by franklin.azeredo — decided by owner.
+- DL-0011 — 2026-07-20 — `Money` lives in `domain.ledger` rather than a shared domain package:
+  ArchUnit forbids any type directly under `com.fkbank.domain`, and the ledger owns money —
+  decided by the architecture baseline (existing executable rule).
+- DL-0012 — 2026-07-20 — Repository ports sit flat in `domain.ledger`, not in a
+  `domain.ledger.port` subpackage. `docs/ARCHITECTURE.md` mentions the latter in prose while the
+  same document, CLAUDE.md invariant 6 and the ArchUnit flatness rule require the former; the
+  executable rule and the existing `domain.identity` layout decide — decided by the architecture
+  baseline. The stale prose is flagged for a follow-up documentation fix.
+- DL-0014 — 2026-07-20 — OPEN: the architecture's "PIT ≥60% on money-moving modules" floor is
+  configured but not evidenced. PIT's coverage minion crashes at start-up on the development
+  machine (`UNKNOWN_ERROR`) across the two permitted correction attempts; the profile ships
+  correct but unproven, and no build step claims the floor is met. Needs an owner decision —
+  see `docs/exec-plans/active/DEP-0001-ledger-dependencies.md`.
+- DL-0013 — 2026-07-20 — Integration tests share one application context through a common base
+  class, and each context's connection pool is capped: five independent contexts exhausted
+  PostgreSQL's connection limit and failed unrelated test classes with "too many clients
+  already" — decided by the build (observed failure).

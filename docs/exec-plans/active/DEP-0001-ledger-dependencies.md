@@ -81,3 +81,24 @@ delivery.
   "PIT ≥60% on money-moving modules (ledger, ...)" floor, and the ledger is the first such module
   to exist. `.claude/rules/qa-ownership.md` anticipates exactly this shape, listing mutation on
   R3+ money slices as a check the normal build does not run.
+
+### Status: configured, NOT yet executing — open item
+
+`./mvnw -Pmutation verify` fails on the Windows development machine before analysing anything:
+
+```
+PIT >> INFO : Created 13 mutation test units in pre scan
+PIT >> INFO : Sending 22 test classes to minion
+PIT >> SEVERE : Coverage generator Minion exited abnormally due to UNKNOWN_ERROR
+```
+
+Two corrections were attempted — binding the goal to `verify` rather than `test`, then excluding
+the Spring integration tests from the analysed set — and the minion crashed identically both
+times, which is the limit for one failure. The cause is not yet identified; the crash happens in
+PIT's own coverage minion during start-up, before any mutant is generated, and may well be
+specific to this machine's JDK or to running under the Maven wrapper on Windows.
+
+**The ≥60% mutation floor is therefore not evidenced by this delivery.** The profile is left in
+place because the configuration itself is correct and untested on Linux, where CI runs; nothing
+in the build claims the floor is met. Deciding how to close this — debug PIT, run it only in CI,
+or revisit the floor — is an owner call recorded separately.
