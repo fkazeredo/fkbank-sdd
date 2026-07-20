@@ -50,8 +50,8 @@ tests; a person opens an account and logs in.
 |---|---|---|---|---|---|---|---|
 | 1 | ☑ | SPEC-0018 — walking skeleton | R3 | opus | 20/07/2026 03:19:57 | 20/07/2026 05:31:18 | Raises the entire baseline every later slice assumes: three-root structure with ArchUnit/Modulith gates, default-deny authorization (embedded AS + PKCE), Flyway/Postgres, Angular shell, E2E stack, real CI — authorization surface ⇒ R3 |
 | 2 | ☑ | SPEC-0016 — observability baseline | R2 | sonnet | 20/07/2026 05:48:16 | 20/07/2026 08:21:11 | Ships only the observability mechanism (MDC propagation, structured logs) — no money or invariant surface touched (design-hardening option: see *Model allocation notes*); depends on SPEC-0018 |
-| 3 | ☐ | SPEC-0001 — ledger core | R3 | opus | 20/07/2026 08:48:05 | — | Owns every ledger invariant: append-only postings, 4-decimal `Money` math, `FOR UPDATE` ascending-id race test, reversal-at-most-once |
-| 4 | ☐ | SPEC-0002 — sign-up & account | R3 | opus | — | — | Same-CPF race under real persistence, idempotent-by-CPF onboarding through bureau `delay`/`duplicate-webhook`, OIDC + PII |
+| 3 | ☑ | SPEC-0001 — ledger core | R3 | opus | 20/07/2026 08:48:05 | 20/07/2026 12:31:19 | Owns every ledger invariant: append-only postings, 4-decimal `Money` math, `FOR UPDATE` ascending-id race test, reversal-at-most-once |
+| 4 | ☐ | SPEC-0002 — sign-up & account | R3 | opus | 20/07/2026 12:35:08 | — | Same-CPF race under real persistence, idempotent-by-CPF onboarding through bureau `delay`/`duplicate-webhook`, OIDC + PII |
 
 ## Sprint 2
 

@@ -2,7 +2,7 @@
 id: SPEC-0001
 title: Ledger core
 slug: ledger-core
-status: IN_PROGRESS
+status: IMPLEMENTED
 risk: R3
 profile: critical
 modules: [ledger, infra]
@@ -15,6 +15,7 @@ planned_sprint: S1
 planned_release: null
 owner_approved_at: 2026-07-20T11:48:05Z
 owner_approved_hash: cd29e975d28c191d6e593a6e4d8aae9705ee89e22db252010af2f8ab653a61e4
+implemented_at: 2026-07-20T15:31:19Z
 ---
 
 # SPEC-0001 — Ledger core
