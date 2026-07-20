@@ -62,12 +62,13 @@ public class SecurityConfig {
   }
 
   /**
-   * The application itself: default-deny.
+   * The application itself: default-deny with a short, explicit public allowlist.
    *
-   * <p>{@code anyRequest().authenticated()} is the whole authorization policy — a route added
-   * later is protected because it exists, not because someone remembered to protect it. An
-   * unauthenticated API call is answered by {@link ProblemDetailAuthenticationEntryPoint} with
-   * {@code 401} and the standard error contract.
+   * <p>{@code anyRequest().authenticated()} remains the fallback for everything not named
+   * above it — a route added later is protected because it exists, not because someone
+   * remembered to protect it. An unauthenticated API call is answered by
+   * {@link ProblemDetailAuthenticationEntryPoint} with {@code 401} and the standard error
+   * contract.
    */
   @Bean
   @Order(2)
@@ -75,7 +76,13 @@ public class SecurityConfig {
       HttpSecurity http, ProblemDetailAuthenticationEntryPoint problemDetailEntryPoint)
       throws Exception {
 
-    http.authorizeHttpRequests(requests -> requests.anyRequest().authenticated())
+    http.authorizeHttpRequests(
+            requests ->
+                requests
+                    .requestMatchers(pathPattern("/actuator/health"))
+                    .permitAll()
+                    .anyRequest()
+                    .authenticated())
         // The API is authenticated by bearer token, never by an ambient cookie, so no CSRF
         // token is required for it. Form login keeps its CSRF protection.
         .csrf(
