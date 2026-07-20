@@ -61,6 +61,17 @@ if [ -f compose.security.yaml ]; then
   export APP_SECURITY_TARGET="$TARGET"
   DAST_STARTED=1
   timeout 2700 docker compose -f compose.security.yaml up --build --abort-on-container-exit --exit-code-from security-tests
+  # A zero exit is not proof the scan happened. Assert the artifacts exist before recording a
+  # PASS, so a recorded report path can never point at a file that was never written.
+  MISSING=""
+  for artifact in zap-report.html zap-api-report.html; do
+    [ -f "$EVIDENCE/$artifact" ] || MISSING="$MISSING $artifact"
+  done
+  if [ -n "$MISSING" ]; then
+    RESULTS+=("dynamic-security=FAIL (no ZAP artifact:$MISSING)")
+    printf '%s\n' "${RESULTS[@]}" > "$EVIDENCE/controls.txt"
+    echo "verify-assurance: FAIL - DAST produced no report:$MISSING" >&2; exit 1
+  fi
   RESULTS+=("dynamic-security=PASS" "dast-report=$EVIDENCE/zap-report.html")
 elif [ "$MODE" = "--requires-heavy" ]; then
   echo 'BLOCKED: compose.security.yaml and its pinned DAST/pentest profile are required' >&2; exit 1
