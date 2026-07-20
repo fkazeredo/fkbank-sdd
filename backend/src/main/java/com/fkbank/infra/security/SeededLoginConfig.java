@@ -5,6 +5,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 
@@ -20,6 +21,19 @@ import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 @Configuration(proxyBeanMethods = false)
 @Profile({"dev", "e2e"})
 public class SeededLoginConfig {
+
+  /**
+   * Hashes the seeded credential.
+   *
+   * <p>The delegating encoder stores the algorithm alongside the hash ({@code {bcrypt}...}),
+   * so the day a stronger algorithm is adopted, existing hashes keep verifying instead of
+   * locking everyone out. Scoped to these profiles because the seeded login is the only
+   * password store that exists yet — real credentials arrive with SPEC-0002.
+   */
+  @Bean
+  PasswordEncoder passwordEncoder() {
+    return PasswordEncoderFactories.createDelegatingPasswordEncoder();
+  }
 
   @Bean
   UserDetailsService seededUserDetailsService(
