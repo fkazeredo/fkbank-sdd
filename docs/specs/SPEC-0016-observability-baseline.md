@@ -2,7 +2,7 @@
 id: SPEC-0016
 title: Observability baseline
 slug: observability-baseline
-status: READY
+status: IN_PROGRESS
 risk: R2
 profile: standard
 modules: [application, infra]
