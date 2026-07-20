@@ -499,12 +499,14 @@ The actual structure may evolve, but material architecture changes require an AD
 
 # Delivery tutorial — machine-first
 
-Normal operation uses three independent commands:
+Normal operation is a spec loop followed by one autonomous closeout:
 
 ```text
 /deliver-spec <id>       # deliver one spec to human merge wait
-/deliver-sprint <sprint> # deliver every committed spec sequentially
-/close-sprint <sprint>   # verify the final increment and run Security Assurance
+/close-sprint <sprint>   # close, assure, prepare and finalize the Sprint release
+
+# Optional, less common shortcut:
+/deliver-sprint <sprint> # deliver every spec, then run the same complete closeout
 ```
 
 The granular commands below are internal phase contracts and recovery entry points, not a
@@ -892,8 +894,8 @@ A critical hotfix never receives `SECURITY_VERIFIED` from risk acceptance alone.
 | Command | Purpose |
 |---|---|
 | `/deliver-spec` | first auto-reconciles any prior merged-but-unreconciled slice, then advances one spec automatically to the human merge wait |
-| `/deliver-sprint` | advances all committed Sprint specs sequentially |
-| `/close-sprint` | auto-reconciles the last merged slice, closes the Sprint and runs final assurance automatically |
+| `/deliver-sprint` | optional whole-Sprint loop: advances all committed specs, then runs `/close-sprint` internally |
+| `/close-sprint` | normal post-spec command: reconciles, closes, assures, prepares and finalizes the release; resume the same command after protected-branch merge waits |
 | `/security-assurance` | internal/recovery entry for the heavy security worker |
 | `/spec` | creates or refines a specification |
 | `/design-slice` | creates the slice plan |
@@ -903,7 +905,7 @@ A critical hotfix never receives `SECURITY_VERIFIED` from risk acceptance alone.
 | `/pr` | prepares and opens a Pull Request |
 | `/review-pr` | reviews a PR in read-only mode |
 | `/fix-pr` | performs one correction round |
-| `/release` | auto-reconciles the last merged slice, then prepares or finalizes a release |
+| `/release` | expert/support entry for out-of-band releases; routine Sprint release is internal to `/close-sprint` |
 | `/hotfix` | conducts a staged hotfix |
 | `/workflow-status` | reads workflow state |
 | `/reconcile-workflow` | manual fallback that reconciles the final slice or any drift; routine closeout runs automatically at the next `/deliver-spec`, `/close-sprint` or `/release` |
@@ -1009,11 +1011,15 @@ The result is a Block Report, not an infinite attempt loop.
 
 # Sprint closure
 
-At the end of a Sprint run `/close-sprint <sprint>`. It sweeps any merged-but-unreconciled slice —
+At the end of a Sprint run `/close-sprint <sprint>`. This is the only routine post-spec command. It
+sweeps any merged-but-unreconciled slice —
 the Sprint's last-slice edge, which has no later `/deliver-spec` to trigger it — into `IMPLEMENTED`
 at the real merge instant (ROADMAP `Done ☑` + `Completed`, durable plan moved to
 `docs/exec-plans/completed/`), reconciles evidence, runs release verification, invokes Security
-Assurance automatically when applicable, and writes the durable closure report. The following list is the machine's output contract, not a prompt ritual:
+Assurance automatically when applicable, writes a concise durable closure report, prepares the
+release and continues through finalization. It never hands the operator off to `/release`.
+Protected-branch merges remain human-only; resume the same `/close-sprint` command afterward.
+The report records auditable outcomes and exceptions, not a mandatory phase diary or token log.
 
 ```text
 We are closing the Sprint.
@@ -1028,10 +1034,7 @@ Analyze:
 - bugs;
 - rework;
 - decisions;
-- time;
-- tokens;
-- compactions;
-- bottlenecks.
+- blockers or waived gates.
 
 Produce:
 1. goal achieved or not;
@@ -1039,11 +1042,7 @@ Produce:
 3. incomplete items;
 4. proposed carry-over;
 5. findings;
-6. first-pass CI;
-7. time per phase;
-8. workflow overhead;
-9. recommendations;
-10. Security Assurance requirement.
+6. verification and Security Assurance verdict.
 ```
 
 A spec is delivered only after it is merged with the applicable gates.

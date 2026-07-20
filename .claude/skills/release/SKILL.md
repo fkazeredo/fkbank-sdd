@@ -6,6 +6,10 @@ disable-model-invocation: true
 
 # /release <version> [--production]
 
+This remains an expert/support entry point for an out-of-band release. Normal Sprint delivery
+does not ask the operator to invoke it: `/close-sprint` composes this contract internally and
+retains ownership of the resume command across protected-branch merge waits.
+
 Read `.claude/rules/workflow-conventions.md` and `.claude/rules/security-gate.md` first.
 Role: `releaser`. Auto-detect the step by state. Without `--production`, this is an
 internal pilot/pre-release (see the production definition in workflow-policy.yml).

@@ -14,7 +14,9 @@ in `.claude/runtime/`). Run as the foreground `pr-reviewer` worker selected by o
 2. Review against: spec fidelity · the plan's Decision Ladder record vs the diff ·
    docs/ARCHITECTURE.md rules · test honesty (assertions, race + replay on money routes) ·
    contracts · migrations · observability · diff-level security (authorization, exposure,
-   masking) · risk classification correctness.
+   masking) · risk classification correctness · behavioral DDD (aggregate invariants and
+   transitions live on domain classes; records are justified messages/self-validating values;
+   Lombok does not create setters or bypass valid construction).
 3. Write `.claude/runtime/review-pr-<n>.md`: findings (ID, severity, confidence, evidence
    file/line), what was NOT reviewed, and a short **human review focus** list (pt-BR
    summary to the operator).

@@ -499,12 +499,14 @@ A estrutura real pode evoluir, mas mudanças arquiteturais materiais exigem ADR.
 
 # Tutorial de entrega — machine-first
 
-A operação normal usa três comandos independentes:
+A operação normal é um loop de specs seguido por um único fechamento autônomo:
 
 ```text
 /deliver-spec <id>       # entrega uma spec até a espera pelo merge humano
-/deliver-sprint <sprint> # entrega sequencialmente todas as specs comprometidas
-/close-sprint <sprint>   # verifica o incremento final e executa Security Assurance
+/close-sprint <sprint>   # fecha, assegura, prepara e finaliza a release da Sprint
+
+# Atalho opcional e menos comum:
+/deliver-sprint <sprint> # entrega todas as specs e executa o mesmo fechamento completo
 ```
 
 Os comandos granulares abaixo são contratos internos e entradas de recuperação, não uma
@@ -891,8 +893,8 @@ Hotfix crítico não recebe `SECURITY_VERIFIED` por simples aceitação de risco
 | Comando | Finalidade |
 |---|---|
 | `/deliver-spec` | primeiro reconcilia automaticamente qualquer fatia anterior já mergeada e não reconciliada, depois avança uma spec até a espera pelo merge humano |
-| `/deliver-sprint` | avança sequencialmente todas as specs comprometidas |
-| `/close-sprint` | reconcilia automaticamente a última fatia mergeada, fecha a Sprint e executa assurance final automaticamente |
+| `/deliver-sprint` | loop opcional da Sprint inteira: avança todas as specs e executa `/close-sprint` internamente |
+| `/close-sprint` | comando normal pós-specs: reconcilia, fecha, assegura, prepara e finaliza a release; após merge protegido, retome o mesmo comando |
 | `/security-assurance` | entrada interna/recuperação do worker de segurança pesada |
 | `/spec` | cria ou refina uma especificação |
 | `/design-slice` | cria o plano da fatia |
@@ -902,7 +904,7 @@ Hotfix crítico não recebe `SECURITY_VERIFIED` por simples aceitação de risco
 | `/pr` | prepara e abre Pull Request |
 | `/review-pr` | revisa PR em modo read-only |
 | `/fix-pr` | executa uma rodada de correção |
-| `/release` | reconcilia automaticamente a última fatia mergeada, depois prepara ou finaliza release |
+| `/release` | entrada especializada para releases fora do fluxo; a release normal da Sprint é interna ao `/close-sprint` |
 | `/hotfix` | conduz hotfix em estágios |
 | `/workflow-status` | consulta estado sem alterar arquivos |
 | `/reconcile-workflow` | fallback manual que reconcilia a última fatia ou desvios; o fechamento de rotina é automático no próximo `/deliver-spec`, `/close-sprint` ou `/release` |
@@ -1008,11 +1010,16 @@ O resultado deve ser um Block Report, não uma tentativa infinita.
 
 # Fechamento da Sprint
 
-Ao final da Sprint, execute `/close-sprint <sprint>`. Ele varre qualquer fatia já mergeada mas ainda
+Ao final da Sprint, execute `/close-sprint <sprint>`. Esse é o único comando rotineiro após as specs.
+Ele varre qualquer fatia já mergeada mas ainda
 não reconciliada — o caso da última fatia da Sprint, que não tem `/deliver-spec` posterior para
 acioná-la — para `IMPLEMENTED` no instante real do merge (ROADMAP `Done ☑` + `Completed`, plano
 durável movido para `docs/exec-plans/completed/`), reconcilia evidências, roda a verificação de
-release, aciona Security Assurance automaticamente quando aplicável e grava o relatório durável. A lista abaixo é o contrato de saída da máquina, não um ritual de prompt:
+release, aciona Security Assurance automaticamente quando aplicável, grava um relatório durável
+conciso, prepara a release e segue até a finalização. Ele nunca transfere o operador para
+`/release`. Os merges de branches protegidas continuam humanos; depois deles, retome o mesmo
+`/close-sprint`. O relatório registra resultados auditáveis e exceções, não um diário obrigatório
+de fases, tokens ou compactações.
 
 ```text
 Estamos fechando a Sprint.
@@ -1027,10 +1034,7 @@ Analise:
 - bugs;
 - rework;
 - decisões;
-- tempo;
-- tokens;
-- compactações;
-- gargalos.
+- bloqueios ou gates dispensados.
 
 Produza:
 1. objetivo alcançado ou não;
@@ -1038,11 +1042,7 @@ Produza:
 3. incompletos;
 4. carry-over;
 5. findings;
-6. first-pass CI;
-7. tempo por fase;
-8. overhead do workflow;
-9. recomendações;
-10. necessidade de Security Assurance.
+6. verificação e veredito de Security Assurance.
 ```
 
 Uma spec só é considerada entregue depois de mergeada com os gates aplicáveis.

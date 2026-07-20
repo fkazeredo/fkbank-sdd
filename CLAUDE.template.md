@@ -24,16 +24,26 @@ Development follows the **RELAY** workflow. Its authority is this file,
 index is `docs/workflow/README.md`; it does not override executable contracts. Non-negotiable:
 
 - 1 active implementation · 0 parallel implementers · agent teams disabled · background tasks disabled.
-- RELAY is an evidence-driven state machine, not a human ceremony. `/deliver-spec` and
-  `/deliver-sprint` advance phases automatically and idempotently until a real terminal or
-  external-wait state. Granular skills remain recovery/debug entry points:
+- RELAY is an evidence-driven state machine, not a human ceremony. `/deliver-spec`,
+  `/close-sprint`, and the optional `/deliver-sprint` advance phases automatically and
+  idempotently until a real terminal or external-wait state. The operator never babysits
+  internal phase commands. Granular skills remain recovery/debug entry points:
 
 ```text
-Normal: /deliver-spec <id> | /deliver-sprint <sprint> | /close-sprint <sprint>
+Normal: /deliver-spec <id> ... then /close-sprint <sprint>
+Optional whole-Sprint loop: /deliver-sprint <sprint>
 Internal transitions: auto-reconcile prior merged slice → spec → design → build → QA worker → PR/CI → review worker → merge wait
 Recovery: /spec /design-slice /approve-plan /build /qa /pr /review-pr /fix-pr
 Support: /release /hotfix /adr /spike /impact · Drift/fallback (recovery only): /workflow-status /reconcile-workflow
 ```
+
+`/close-sprint` owns the whole post-delivery path: final reconcile, verification, applicable
+security assurance, closure evidence, release preparation, release PR, waiting for the protected
+`main` merge, tag/GitHub Release, and the post-release sync PR. It composes `/release` internally;
+the operator is never told to invoke `/release` as the next routine Sprint step. If a protected
+branch merge requires the human, resume with the same `/close-sprint <sprint> --resume` command.
+`/deliver-sprint` is only a convenience for the rare case where the operator wants every committed
+spec delivered in one loop; after the last merge it automatically executes this same closeout.
 
 - Every skill begins by reading `.claude/rules/workflow-conventions.md`.
 - Risk drives process (R0–R4): see `.claude/rules/risk-model.md`. Every versioned change
@@ -76,6 +86,13 @@ Support: /release /hotfix /adr /spike /impact · Drift/fallback (recovery only):
 8. **Human Decision Gate.** No silent assumptions, no silent conflict resolution, no
    material decision without human visibility. Stop with a `decision-request.md`
    (`.claude/rules/human-decision-gate.md`).
+9. **Behavioral domain model.** Aggregates and value objects are real classes that protect valid
+   state and expose ubiquitous-language behavior. Do not default domain types to Java `record`,
+   public setters, generated all-arguments constructors, or data-only accessors. A `record` is
+   appropriate for immutable messages and boundary data (commands, events, DTOs, projections) and
+   for a value object only when it still owns meaningful validation/behavior and cannot represent
+   invalid state. Lombok is approved to remove mechanical boilerplate, never to generate an anemic
+   model or bypass invariants; prefer targeted annotations and keep construction rules explicit.
 
 ## Language
 

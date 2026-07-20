@@ -1,6 +1,6 @@
 ---
 name: deliver-sprint
-description: Machine-first RELAY command — executes a Sprint slice by slice using deliver-spec, dependency ordered and idempotently resumable. Closing remains a separate command.
+description: Optional whole-Sprint RELAY loop — delivers every committed spec sequentially and then executes the complete close-sprint/release path automatically. Idempotently resumable.
 disable-model-invocation: true
 ---
 
@@ -21,11 +21,14 @@ Sprint. Role: `orchestrator`.
    or human merge. `--resume` verifies evidence before continuing.
 5. A blocked prerequisite blocks dependent slices. An unrelated later slice may continue only
    when the Sprint manifest explicitly proves independence and the owner accepts the carry-over.
-6. After all committed slices have human merge evidence, end `SPRINT_DELIVERED`. Sprint closure
-   is deliberately separate: the next command is `/close-sprint <sprint>`.
+6. After all committed slices have human merge evidence, invoke the `/close-sprint <sprint>`
+   contract internally and continue through its release wait/finalization states. The operator
+   does not issue a separate close or release command. When a human merge is required, resume the
+   whole operation with `/deliver-sprint <sprint> --resume`; it delegates to the persisted
+   close-sprint state without replaying completed slices.
 
 Never change Sprint scope silently, merge, push protected branches, bypass independent phases,
 or convert missing evidence into success.
 
-Print exactly one compact terminal line: `RELAY STATE: <state> | evidence: <paths> | resume:
-<command-or-none>`.
+Print exactly one compact terminal line at a genuine wait or terminal state:
+`RELAY STATE: <state> | evidence: <paths> | resume: <same-deliver-sprint-command-or-none>`.

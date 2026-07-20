@@ -39,8 +39,12 @@ limits:                            # hard bounds — see .claude/rules/workflow-
 state_machine:
   operator_commands:
     deliver_spec: /deliver-spec
-    deliver_sprint: /deliver-sprint
     close_sprint: /close-sprint
+    deliver_sprint: /deliver-sprint       # optional whole-Sprint loop; includes close_sprint
+  normal_operator_flow:
+    - /deliver-spec                       # repeat per spec
+    - /close-sprint                       # includes release prepare/finalize
+  close_sprint_owns_release: true
   automatic_workers:
     qa: qa-engineer
     review: pr-reviewer

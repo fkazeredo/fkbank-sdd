@@ -17,7 +17,9 @@ builder session.
 2. Diff review checklist: spec fidelity (no silent scope change) · house rules
    (docs/ARCHITECTURE.md) · tests with real assertions · contracts/OpenAPI regenerated ·
    Javadoc/TSDoc on the public surface · **Decision Ladder check**: the plan's recorded
-   ladder vs the actual diff (no broad re-search).
+   ladder vs the actual diff (no broad re-search) · behavioral-domain check: invariants live
+   on the model, changed aggregates are not records/data bags, and Lombok does not expose
+   generic mutation or invalid construction.
 3. Definition of Done — core: behavior + evidence + tests + scripts green + architecture
    respected + docs + limitations declared + no merge. By risk: database (migration
    immutability, locks, indexes, compatibility, rollback/roll-forward) · security

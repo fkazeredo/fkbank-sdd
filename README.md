@@ -53,6 +53,13 @@ and deterministic spec-approval hashing — so the scaffolding is proven wired, 
 4. Set `.github/CODEOWNERS` to your handle, and rename `app` in the compose files.
 5. Write your first spec with `/spec`, then `/deliver-spec <id>`.
 
+Routine delivery deliberately needs no phase babysitting: repeat `/deliver-spec <id>` for the
+Sprint's specs, then run one `/close-sprint <sprint>`. That command owns reconciliation, final
+verification and assurance, the closure record, release preparation and release finalization.
+Protected-branch merges remain human-only; resume the same `/close-sprint --resume` afterward.
+`/deliver-sprint <sprint>` is the optional, less common shortcut that performs the entire spec
+loop and then runs the identical closeout.
+
 **(B) Replay FKBANK from scratch.** Copy everything in, `mv CLAUDE.example-fkbank.md CLAUDE.md`,
 and run the backlog in `docs/ROADMAP.md` order starting at `SPEC-0018` (walking skeleton) —
 which is the slice that creates `backend/`, `frontend/` and the real application topology.

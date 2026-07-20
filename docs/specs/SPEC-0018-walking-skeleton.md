@@ -34,7 +34,8 @@ enforced, and demonstrable.
 One vertical thread through the whole documented architecture, nothing more:
 
 - **Backend** (`backend/`, Maven wrapper committed): Java 21 · Spring Boot 4.1 · Spring
-  Modulith 2.1. Exactly three root packages under `com.fkbank` (`domain`, `application`,
+  Modulith 2.1 · Lombok for targeted boilerplate reduction (never `@Data`/public setters on
+  domain aggregates or entities). Exactly three root packages under `com.fkbank` (`domain`, `application`,
   `infra`); first explicitly-annotated bounded context `domain.identity` with one use case
   (describe the authenticated principal) delivered at `GET /api/me` through
   `application.api`; `infra.persistence` (Flyway + PostgreSQL 16), `infra.security`

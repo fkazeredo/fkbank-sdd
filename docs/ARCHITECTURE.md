@@ -17,6 +17,10 @@ zoneless, signals) · PrimeNG (Aura) + Tailwind 4 · JUnit 5, Testcontainers, Ar
 PIT · Vitest, Playwright · Micrometer/Prometheus/Loki/Alloy/Grafana · Docker Compose ·
 GitHub Actions + gitleaks + Dependabot.
 
+Lombok is an approved backend build dependency and must be included when the backend module is
+created. It may remove mechanical Java boilerplate, but it does not define the domain model and
+must not hide construction rules or make invalid state easy to create.
+
 ## Style
 
 The backend is a **hexagonal (ports & adapters) modular monolith with pragmatic DDD** —
@@ -28,6 +32,26 @@ adapters and configuration (persistence, security, messaging, wiring). No fourth
 is permitted. Pragmatic means no ceremony: no interactor/use-case classes, no empty
 layers or grouping subpackages — behavior lives on the domain model, adapters stay thin. These
 rules are ArchUnit-enforced so the style cannot silently drift back.
+
+### Behavioral domain modeling
+
+The domain is not a collection of data carriers. Aggregates and value objects are classes with
+encapsulated state, valid construction and ubiquitous-language operations. State changes happen
+through behavior that enforces invariants; delivery and persistence adapters must not assemble or
+mutate domain state field by field. Prefer intention-revealing methods such as `approve`, `reject`,
+`post`, `lock`, or `reverse` over generic setters and externally coordinated state transitions.
+
+Java `record` is not the default domain type. Use it freely for immutable boundary messages such
+as commands, domain events, DTOs and projections. A small value object may remain a record only when
+its compact constructor rejects invalid values and the type owns the relevant behavior. Aggregates,
+entities with lifecycle, and concepts whose invariants evolve are regular classes. Existing records
+encountered in a changed slice must be evaluated by responsibility: refactor an anemic domain type
+when the slice needs its behavior, but do not perform unrelated repository-wide churn.
+
+Lombok is allowed for targeted boilerplate reduction (`@Getter`, `@EqualsAndHashCode`,
+`@ToString`, carefully scoped constructors/builders). `@Data`, public setters, and generated
+all-arguments constructors are forbidden on domain aggregates and entities because they expose
+state instead of protecting it. Hand-write factories and behavior when that makes invariants clear.
 
 - `domain.<bounded-context>` owns aggregates, value objects, domain services, use cases,
   domain events, and ports, placed **directly in the module package — bounded contexts are

@@ -7,6 +7,9 @@ This directory contains the executable RELAY workflow. Its human-readable index 
   `/deliver-sprint`, `/close-sprint`, `/security-assurance`, and the recovery/fallback `/reconcile-workflow`; every workflow skill carries
   `disable-model-invocation: true` (operators invoke top-level commands; those commands drive
   internal transitions and approved workers automatically).
+  Routine operation is repeated `/deliver-spec` followed by one `/close-sprint`; that close command
+  composes release preparation/finalization internally. `/deliver-sprint` is the optional whole-Sprint
+  loop and includes the same closeout.
 - **agents/** — isolated foreground workers: `qa-engineer`, `pr-reviewer`, and
   `security-assurance-engineer`. Delivery orchestration may invoke exactly these workers;
   manual main-session use remains available for recovery. They cannot spawn workers.

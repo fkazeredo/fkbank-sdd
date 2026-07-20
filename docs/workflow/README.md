@@ -22,11 +22,23 @@ in `CLAUDE.md` applies.
 | Command | Outcome |
 |---|---|
 | `/deliver-spec <id> [--resume]` | validates and delivers one spec up to a real wait state |
-| `/deliver-sprint <sprint> [--resume]` | delivers committed specs sequentially by dependency |
-| `/close-sprint <sprint> [--resume]` | reconciles the increment and runs final assurance |
+| `/deliver-sprint <sprint> [--resume]` | optional: delivers all committed specs, then closes and releases the Sprint |
+| `/close-sprint <sprint> [--resume]` | normal closeout after individual specs: reconcile, verify, assure, prepare and finalize the release |
 
 Granular commands such as `/design-slice`, `/build`, `/qa`, `/pr`, and `/review-pr` are internal
 phase contracts and recovery entries. They are not mandatory operator ceremonies.
+
+The routine operator flow is deliberately small:
+
+```text
+/deliver-spec <id>    # repeat for the Sprint's specs
+/close-sprint <sprint>
+```
+
+`/close-sprint` does not hand the operator off to `/release`. It keeps ownership through release
+preparation and finalization. A protected-branch merge is the only normal human wait; after it,
+resume the same top-level command. `/deliver-sprint` is the less common one-command alternative
+that performs the spec loop and then delegates to the identical closeout.
 
 ## Machine boundary
 

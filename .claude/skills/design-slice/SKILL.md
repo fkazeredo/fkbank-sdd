@@ -23,7 +23,10 @@ R0/R1 do not use this skill (inline plan in /build).
 3. Executability gate: any acceptance criterion that does not map to a test AS WRITTEN ⇒
    propose the rewrite and ask (batched). Nothing is planned over an ambiguous criterion.
 4. Execute the FULL Decision Ladder (rungs 1–8) for the solution approach. Record the
-   `## Decision Ladder` block in the plan.
+   `## Decision Ladder` block in the plan. For backend domain changes, explicitly assign
+   invariants and state transitions to aggregates/value objects. Do not plan a record-shaped
+   data model with behavior coordinated by adapters. Identify which immutable boundary types
+   may remain records and which lifecycle-bearing types must be behavioral classes.
 5. Write `.claude/runtime/<id>/plan.md`: Understanding · Modules touched · Files ·
    Patterns to reuse · Contracts/Data/Migrations · TDD sequence (behavior-sized steps) ·
    Builder test plan · QA focus · Docs impact · Risks · Non-goals · Open doubts (batched)

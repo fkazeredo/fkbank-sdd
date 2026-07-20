@@ -6,6 +6,8 @@
 # Java / Maven
 target/
 build/
+!.claude/skills/build/
+!.claude/skills/build/SKILL.md
 *.class
 *.jar
 !.mvn/wrapper/*.jar
