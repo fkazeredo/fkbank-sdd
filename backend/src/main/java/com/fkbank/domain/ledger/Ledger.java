@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.stream.Stream;
 
 /**
@@ -117,18 +119,33 @@ public class Ledger {
    */
   public TrialBalance trialBalance() {
     Map<AccountId, Money> netByAccount = postings.netAmountByAccount();
+    Map<AccountId, Money> savedByAccount = new LinkedHashMap<>();
+    balances.findAll().forEach(balance -> savedByAccount.put(balance.accountId(), balance.amount()));
+
+    // Every account either side knows about, not just the ones with a balance row. Walking the
+    // balances alone means an account whose row has been deleted is never looked at: its postings
+    // still say it holds money, nothing contradicts them, and the audit reports a clean ledger
+    // over the exact damage it exists to find.
+    Set<AccountId> everyAccount = new TreeSet<>();
+    everyAccount.addAll(savedByAccount.keySet());
+    everyAccount.addAll(netByAccount.keySet());
+
     List<AccountId> drifted =
-        balances.findAll().stream()
-            .filter(balance -> hasDrifted(balance, netByAccount))
-            .map(Balance::accountId)
-            .sorted()
+        everyAccount.stream()
+            .filter(account -> hasDrifted(account, savedByAccount, netByAccount))
             .toList();
     return new TrialBalance(postings.totalDebits(), postings.totalCredits(), drifted);
   }
 
-  private static boolean hasDrifted(Balance balance, Map<AccountId, Money> netByAccount) {
-    Money expected = netByAccount.getOrDefault(balance.accountId(), Money.zero());
-    return balance.amount().compareTo(expected) != 0;
+  private static boolean hasDrifted(
+      AccountId account, Map<AccountId, Money> savedByAccount, Map<AccountId, Money> netByAccount) {
+    Money saved = savedByAccount.get(account);
+    if (saved == null) {
+      // Postings reference it, so the account exists and is owed a balance row. Missing is drift:
+      // an unknown position is not a matching one.
+      return true;
+    }
+    return saved.compareTo(netByAccount.getOrDefault(account, Money.zero())) != 0;
   }
 
   private Posting write(Posting posting) {

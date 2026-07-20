@@ -25,7 +25,8 @@
     <jacoco.version>0.8.15</jacoco.version>
     <jqwik.version>1.9.2</jqwik.version>
     <pitest.version>1.17.4</pitest.version>
-    <pitest-junit5.version>1.2.1</pitest-junit5.version>
+    <pitest-junit5.version>1.2.3</pitest-junit5.version>
+    <junit-platform.version>6.0.3</junit-platform.version>
     <!-- Mutation floor for the modules that move money (docs/ARCHITECTURE.md §Testing). -->
     <pitest.mutation.minimum>60</pitest.mutation.minimum>
     <!-- Inherited floors (docs/ARCHITECTURE.md §Testing). -->
@@ -328,14 +329,8 @@
                 <param>com.fkbank.domain.ledger.*</param>
               </targetTests>
               <!-- Mutants are hunted with the pure domain tests. The integration tests boot
-                   Spring and a database, which the analysis cannot drive per mutant.
-
-                   KNOWN GAP - this exclusion currently hollows out the floor it protects. Ledger
-                   itself is exercised only by those integration tests, so excluding them leaves
-                   the one class the mutation floor exists for with no test to kill a mutant.
-                   Closing it needs unit tests for Ledger against fake ports, which is what the
-                   value objects already have and Ledger does not. Recorded rather than hidden by
-                   narrowing targetClasses to match what the tests happen to reach. -->
+                   Spring and a database, which the analysis cannot drive per mutant. LedgerTest
+                   covers Ledger against fake ports, so excluding them leaves no class unhunted. -->
               <excludedTestClasses>
                 <param>com.fkbank.domain.ledger.*IT</param>
               </excludedTestClasses>
@@ -354,6 +349,29 @@
                 <groupId>org.pitest</groupId>
                 <artifactId>pitest-junit5-plugin</artifactId>
                 <version>${pitest-junit5.version}</version>
+                <exclusions>
+                  <!-- The plugin is built against JUnit Platform 1.9; Spring Boot 4.1 brings 6.x.
+                       Letting both onto the forked analysis JVM's classpath puts a 1.9 launcher
+                       beside a 6.x engine, and test discovery dies looking for a class the old
+                       launcher never had - reported only as the fork exiting abnormally. -->
+                  <exclusion>
+                    <groupId>org.junit.platform</groupId>
+                    <artifactId>junit-platform-launcher</artifactId>
+                  </exclusion>
+                  <exclusion>
+                    <groupId>org.junit.platform</groupId>
+                    <artifactId>junit-platform-engine</artifactId>
+                  </exclusion>
+                  <exclusion>
+                    <groupId>org.junit.platform</groupId>
+                    <artifactId>junit-platform-commons</artifactId>
+                  </exclusion>
+                </exclusions>
+              </dependency>
+              <dependency>
+                <groupId>org.junit.platform</groupId>
+                <artifactId>junit-platform-launcher</artifactId>
+                <version>${junit-platform.version}</version>
               </dependency>
             </dependencies>
           </plugin>

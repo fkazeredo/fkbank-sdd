@@ -86,7 +86,10 @@ CREATE TRIGGER posting_no_reversal_chain
 -- Immutability, enforced where it cannot be argued with.
 CREATE OR REPLACE FUNCTION posting_is_append_only() RETURNS TRIGGER AS $$
 BEGIN
-    RAISE EXCEPTION 'posting is append-only: % on posting is not permitted', TG_OP
+    -- Names the table it actually fired on. Hardcoding one table's name misdirects whoever reads
+    -- the error when the same guard protects more than one.
+    RAISE EXCEPTION '% is append-only: % on % is not permitted',
+        TG_TABLE_NAME, TG_OP, TG_TABLE_NAME
         USING ERRCODE = 'integrity_constraint_violation';
 END;
 $$ LANGUAGE plpgsql;
@@ -116,12 +119,18 @@ CREATE TABLE balance (
 COMMENT ON TABLE balance IS
     'Materialized balance per account, verified against the postings by the trial balance.';
 
--- Balances may legitimately be updated - that is what a posting does - but never wiped wholesale.
--- Emptying this table would leave every posting intact and every balance gone, a state the trial
--- balance reports as total drift and nothing in the product knows how to rebuild.
+-- Balances may legitimately be updated - that is what a posting does - and a row is created when
+-- an account is opened. Neither removal nor wholesale wiping is ever legitimate: a posting can
+-- never be deleted, so a balance row that disappears leaves an account whose history says it holds
+-- money and whose position no longer exists. Guarding TRUNCATE alone leaves DELETE as an open door
+-- to the same state.
 CREATE TRIGGER balance_no_truncate
     BEFORE TRUNCATE ON balance
     FOR EACH STATEMENT EXECUTE FUNCTION posting_is_append_only();
+
+CREATE TRIGGER balance_no_delete
+    BEFORE DELETE ON balance
+    FOR EACH ROW EXECUTE FUNCTION posting_is_append_only();
 
 -- The internal side of the chart of accounts. Customer and box accounts are opened on demand.
 INSERT INTO account (code, kind) VALUES

@@ -69,9 +69,16 @@ class LedgerConfig {
    * midway through makes the audit report drift on an account that is perfectly fine — and an
    * audit that cries wolf is one people learn to ignore. A repeatable read gives all four
    * statements one snapshot.
+   *
+   * <p>The audit demands its own transaction rather than joining whatever is already running.
+   * Isolation belongs to the transaction, not to the method: joining an outer one silently hands
+   * back that transaction's level, so the snapshot would be a guarantee everywhere except inside
+   * the caller most likely to need it — a batch or job that already opened a transaction of its
+   * own.
    */
   private static TransactionAttributeSource ledgerTransactionAttributes() {
     RuleBasedTransactionAttribute audit = new RuleBasedTransactionAttribute();
+    audit.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
     audit.setIsolationLevel(TransactionDefinition.ISOLATION_REPEATABLE_READ);
     audit.setReadOnly(true);
 
