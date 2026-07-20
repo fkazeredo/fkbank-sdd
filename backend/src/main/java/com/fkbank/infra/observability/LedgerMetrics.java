@@ -3,8 +3,9 @@ package com.fkbank.infra.observability;
 import com.fkbank.domain.ledger.PostingRecorded;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
-import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 
 /**
  * Counts money movements as they are recorded.
@@ -35,7 +36,14 @@ class LedgerMetrics {
             .register(registry);
   }
 
-  @EventListener
+  /**
+   * Counted only once the transaction commits.
+   *
+   * <p>A posting that is rolled back never happened, and a counter that included it would report
+   * movements the ledger has no record of — the kind of discrepancy that costs hours when a
+   * dashboard and a statement disagree.
+   */
+  @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
   void onPostingRecorded(PostingRecorded event) {
     if (event.isReversal()) {
       reversals.increment();

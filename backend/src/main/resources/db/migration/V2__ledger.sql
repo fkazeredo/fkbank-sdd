@@ -72,6 +72,13 @@ CREATE TRIGGER posting_no_update_or_delete
     BEFORE UPDATE OR DELETE ON posting
     FOR EACH ROW EXECUTE FUNCTION posting_is_append_only();
 
+-- TRUNCATE is not a DELETE as far as triggers are concerned: it removes every row without
+-- firing a row-level trigger even once, so the guard above would watch an empty table being
+-- emptied. It needs its own statement-level trigger, or one statement erases the ledger.
+CREATE TRIGGER posting_no_truncate
+    BEFORE TRUNCATE ON posting
+    FOR EACH STATEMENT EXECUTE FUNCTION posting_is_append_only();
+
 -- What an account currently holds.
 --
 -- A convenience, not the truth: the postings are the truth. Keeping it saved avoids replaying an

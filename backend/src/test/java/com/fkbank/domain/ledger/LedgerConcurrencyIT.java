@@ -99,6 +99,39 @@ class LedgerConcurrencyIT extends LedgerIntegrationTest {
     }
   }
 
+  @Test
+  @DisplayName("two reversals of one posting: one contra is written, the loser is told why")
+  void concurrentReversalsProduceOneContraAndAStableRefusal() throws Exception {
+    Account settlement = fixture.settlementAccount();
+    Account customer = fixture.emptyCustomerAccount();
+    Posting deposit = ledger.record(settlement.id(), customer.id(), Money.of("30.00"));
+
+    List<Outcome> outcomes =
+        runTogether(() -> attemptReversal(deposit), () -> attemptReversal(deposit));
+
+    assertThat(outcomes)
+        .as("the loser must learn that the posting was already reversed, not that the account"
+            + " it drained happened to be empty, and must not be handed a persistence error")
+        .containsExactlyInAnyOrder(Outcome.COMMITTED, Outcome.REVERSAL_NOT_ALLOWED);
+
+    assertThat(ledger.balanceOf(customer.id()))
+        .as("exactly one contra was applied, so the deposit is undone once")
+        .isEqualTo(Money.zero());
+    assertThat(ledger.balanceOf(settlement.id())).isEqualTo(Money.zero());
+    assertThat(ledger.trialBalance().isConsistent()).isTrue();
+  }
+
+  private Outcome attemptReversal(Posting original) {
+    try {
+      ledger.reverse(original.id());
+      return Outcome.COMMITTED;
+    } catch (ReversalNotAllowedException expected) {
+      return Outcome.REVERSAL_NOT_ALLOWED;
+    } catch (InsufficientFundsException wrongReason) {
+      return Outcome.INSUFFICIENT_FUNDS;
+    }
+  }
+
   /** Releases both callables at the same instant and collects what each one concluded. */
   private static List<Outcome> runTogether(Callable<Outcome> left, Callable<Outcome> right)
       throws Exception {
@@ -130,6 +163,7 @@ class LedgerConcurrencyIT extends LedgerIntegrationTest {
 
   private enum Outcome {
     COMMITTED,
-    INSUFFICIENT_FUNDS
+    INSUFFICIENT_FUNDS,
+    REVERSAL_NOT_ALLOWED
   }
 }

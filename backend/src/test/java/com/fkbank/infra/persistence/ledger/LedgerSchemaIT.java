@@ -28,10 +28,12 @@ class LedgerSchemaIT extends LedgerIntegrationTest {
   @Autowired private DataSource dataSource;
 
   @Test
-  @DisplayName("seeds the internal side of the chart of accounts, each with a zero balance")
+  @DisplayName("seeds the internal side of the chart of accounts, each with a balance row")
   void seedsTheChartOfAccounts() throws Exception {
-    // Restricted to the seeded codes on purpose: other tests in this suite open accounts of
-    // their own, and a bare count would pass or fail depending on what ran first.
+    // Restricted to the seeded codes, and silent about the amounts: other tests in this suite
+    // open accounts and move money through these ones, so anything asserted about the balances
+    // here would pass or fail depending on what ran first. What the migration owes is that each
+    // seeded account exists and has somewhere to hold a balance.
     List<String> codes = new ArrayList<>();
     try (Connection connection = dataSource.getConnection();
         Statement statement = connection.createStatement();
@@ -39,7 +41,7 @@ class LedgerSchemaIT extends LedgerIntegrationTest {
             statement.executeQuery(
                 """
                 SELECT a.code FROM account a JOIN balance b ON b.account_id = a.id
-                WHERE b.amount = 0 AND a.code IN (
+                WHERE a.code IN (
                     'internal:settlement:boleto',
                     'internal:settlement:pix',
                     'internal:settlement:card',
@@ -81,6 +83,19 @@ class LedgerSchemaIT extends LedgerIntegrationTest {
         .hasMessageContaining("append-only");
 
     assertThat(amountOf(posting)).isEqualByComparingTo("10.0000");
+  }
+
+  @Test
+  @DisplayName("refuses to truncate the posting table - the row trigger alone would not fire")
+  void refusesToTruncateThePostingTable() throws Exception {
+    UUID posting = insertPosting("10.0000", null);
+
+    assertThatThrownBy(() -> execute("TRUNCATE TABLE posting CASCADE"))
+        .hasMessageContaining("append-only");
+
+    assertThat(amountOf(posting))
+        .as("one statement must not be able to erase the ledger")
+        .isEqualByComparingTo("10.0000");
   }
 
   @Test
@@ -145,6 +160,14 @@ class LedgerSchemaIT extends LedgerIntegrationTest {
             "status");
   }
 
+  /**
+   * Inserts a posting straight into the table and moves the two balances to match.
+   *
+   * <p>Moving the balances is not incidental. A posting can never be deleted, so one written here
+   * without its balances would leave the ledger permanently inconsistent, and every later test
+   * asserting that the trial balance flags nothing would fail — or pass, depending on which class
+   * happened to run first.
+   */
   private UUID insertPosting(String amount, UUID reverses) throws Exception {
     UUID id = UUID.randomUUID();
     String reversesValue = reverses == null ? "NULL" : "'" + reverses + "'";
@@ -159,6 +182,19 @@ class LedgerSchemaIT extends LedgerIntegrationTest {
                %s, 'BRL', now(), %s
         """
             .formatted(id, amount, reversesValue));
+
+    execute(
+        """
+        UPDATE balance SET amount = amount - %s
+        WHERE account_id = (SELECT id FROM account WHERE code = 'internal:settlement:pix')
+        """
+            .formatted(amount));
+    execute(
+        """
+        UPDATE balance SET amount = amount + %s
+        WHERE account_id = (SELECT id FROM account WHERE code = 'internal:settlement:boleto')
+        """
+            .formatted(amount));
     return id;
   }
 

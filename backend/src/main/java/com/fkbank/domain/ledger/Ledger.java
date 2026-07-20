@@ -4,7 +4,6 @@ import java.time.Clock;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -72,16 +71,23 @@ public class Ledger {
    */
   public Posting reverse(PostingId original) {
     Posting source =
-        postings
-            .findById(original)
-            .orElseThrow(() -> new NoSuchElementException("no posting " + original));
+        postings.findById(original).orElseThrow(() -> new UnknownPostingException(original));
     if (source.isReversal()) {
       throw ReversalNotAllowedException.isItselfAReversal(original);
     }
+
+    Posting contra = Posting.reverseOf(PostingId.next(), source, clock.instant());
+    Map<AccountId, Balance> locked = lockBalancesOf(contra);
+
+    // Asked only once the accounts are held. Both reversals of one posting move the same two
+    // balances, so whichever arrives second waits here and then sees the contra the first one
+    // committed. Asking before the lock would let both read "not yet reversed": the loser would
+    // go on to be refused by the unique index for running out of money, reporting a cause that
+    // has nothing to do with why it was actually rejected.
     if (postings.existsReversalOf(original)) {
       throw ReversalNotAllowedException.alreadyReversed(original);
     }
-    return write(Posting.reverseOf(PostingId.next(), source, clock.instant()));
+    return write(contra, locked);
   }
 
   /**
@@ -94,7 +100,7 @@ public class Ledger {
     return balances
         .find(accountId)
         .map(Balance::amount)
-        .orElseThrow(() -> new NoSuchElementException("no balance for account " + accountId));
+        .orElseThrow(() -> new UnknownAccountException(accountId));
   }
 
   /** Looks up a movement that was recorded. */
@@ -126,32 +132,45 @@ public class Ledger {
   }
 
   private Posting write(Posting posting) {
-    applyToBalances(posting);
+    return write(posting, lockBalancesOf(posting));
+  }
+
+  private Posting write(Posting posting, Map<AccountId, Balance> locked) {
+    applyToBalances(posting, locked);
     Posting saved = postings.save(posting);
     events.publish(PostingRecorded.from(saved));
     return saved;
   }
 
   /**
-   * Applies a posting to the two balances it touches.
+   * Holds the two accounts a posting touches, in ascending id order.
    *
-   * <p>Both accounts are locked first, in ascending id order, and only then read: a balance read
-   * before the lock is a balance another transaction may already have spent. The debit is applied
-   * before the credit so an account that cannot cover the movement refuses it before anything has
-   * been changed.
+   * <p>Taking the locks in a fixed order is what keeps two movements between the same pair of
+   * accounts from each waiting on what the other holds. Locking is separate from applying so a
+   * caller can ask a question that must be answered under the lock before deciding to write.
    */
-  private void applyToBalances(Posting posting) {
+  private Map<AccountId, Balance> lockBalancesOf(Posting posting) {
     Map<AccountId, Balance> locked = new LinkedHashMap<>();
     Stream.of(posting.debitAccountId(), posting.creditAccountId())
         .sorted()
         .forEach(id -> locked.put(id, balances.lockForUpdate(id)));
+    return locked;
+  }
 
+  /**
+   * Applies a posting to the balances already held.
+   *
+   * <p>The balances were read after their locks were taken: a balance read before the lock is a
+   * balance another transaction may already have spent. The debit is applied before the credit so
+   * an account that cannot cover the movement refuses it before anything has been changed.
+   */
+  private void applyToBalances(Posting posting, Map<AccountId, Balance> locked) {
     locked.get(posting.debitAccountId()).debit(posting.amount());
     locked.get(posting.creditAccountId()).credit(posting.amount());
     locked.values().forEach(balances::save);
   }
 
   private void requireExists(AccountId id) {
-    accounts.findById(id).orElseThrow(() -> new NoSuchElementException("no account " + id));
+    accounts.findById(id).orElseThrow(() -> new UnknownAccountException(id));
   }
 }
