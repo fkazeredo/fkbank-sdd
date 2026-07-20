@@ -40,8 +40,7 @@ import tools.jackson.databind.ObjectMapper;
     webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
     properties = {
       "logging.file.name=${java.io.tmpdir}/fkbank-structured-logging-it/app.log",
-      "logging.structured.format.file=ecs",
-      "logging.level.com.fkbank.infra.observability.CorrelationIdFilter=DEBUG"
+      "logging.structured.format.file=ecs"
     })
 @ActiveProfiles("e2e")
 @DisplayName("structured JSON logging")

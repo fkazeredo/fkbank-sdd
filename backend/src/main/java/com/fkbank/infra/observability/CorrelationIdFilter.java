@@ -39,7 +39,7 @@ public class CorrelationIdFilter extends OncePerRequestFilter {
     response.setHeader(HEADER, correlationId);
     MDC.put(MDC_KEY, correlationId);
     try {
-      log.debug(
+      log.info(
           "{} correlationId for {} {}",
           trusted ? "echoed" : "generated",
           request.getMethod(),
