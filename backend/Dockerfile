@@ -17,8 +17,13 @@ RUN ./mvnw -B -q clean package -DskipTests
 FROM eclipse-temurin:21-jre-alpine AS runtime
 WORKDIR /app
 
-# Never run as root: a container escape should not start with uid 0.
-RUN addgroup -S fkbank && adduser -S fkbank -G fkbank
+# Patch the base image's OS packages before dropping privileges. Base images lag behind Alpine's
+# security updates, and the supply-chain gate fails the build on HIGH/CRITICAL CVEs in them - so
+# this is what keeps the gate satisfied without weakening it. It does make the image contents
+# vary with build date; that is the accepted trade-off for shipping patched libraries.
+RUN apk --no-cache upgrade \
+ # Never run as root: a container escape should not start with uid 0.
+ && addgroup -S fkbank && adduser -S fkbank -G fkbank
 USER fkbank
 
 COPY --from=build /app/target/*.jar app.jar

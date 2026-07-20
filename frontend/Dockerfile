@@ -16,6 +16,12 @@ RUN npm run build
 # Port 8090 is above 1024, so no privileged bind is needed.
 FROM nginxinc/nginx-unprivileged:1.29-alpine AS runtime
 
+# Patching OS packages needs root, so it happens before privileges are dropped again below.
+# Base images lag behind Alpine's security updates and the supply-chain gate fails on
+# HIGH/CRITICAL CVEs in them.
+USER root
+RUN apk --no-cache upgrade
+
 # Declared explicitly even though the base image already sets it: a container escape should not
 # begin as root, and the supply-chain scanner checks this Dockerfile rather than the base image.
 USER 101
