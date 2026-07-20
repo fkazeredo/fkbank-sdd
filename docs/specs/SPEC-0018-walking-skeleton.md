@@ -56,8 +56,8 @@ One vertical thread through the whole documented architecture, nothing more:
 - **Runtime artifacts**: `compose.dev.yaml` (PostgreSQL for local dev), `compose.e2e.yaml`
   (full ephemeral stack), `compose.prod.yaml` + Dockerfiles (deploy-ready; no cutover).
 - **CI completion**: `verify-slice`/E2E jobs start executing the real build (the scripts
-  already auto-detect `backend/`/`frontend/`); add CodeQL workflow and Dependabot config
-  (Maven, npm, GitHub Actions) per ARCHITECTURE §CI and deploy.
+  already auto-detect `backend/`/`frontend/`); CodeQL workflow per ARCHITECTURE §CI and
+  deploy. Dependabot is explicitly excluded (DL-0009).
 
 ## Out of scope
 
@@ -216,6 +216,14 @@ Format: `DL-NNNN — YYYY-MM-DD — decision — decided by <owner|policy|archit
   content is unchanged since the Lombok/behavioral-DDD edit in `81862e4`, so the design is
   derived under CLAUDE.md invariant 9 from the start — decided by owner via
   `/deliver-spec 18`.
+- DL-0009 — 2026-07-20 — Dependabot is removed and will not be adopted: unattended update
+  Pull Requests flood the repository for no MVP gain. `.github/dependabot.yml` is deleted and
+  ARCHITECTURE §Stack records the exclusion. Dependency vulnerabilities remain gated in CI by
+  the `supply-chain-deps` Trivy scan, so the security control is retained while the automation
+  is dropped; version bumps become a deliberate human action. This amends the Scope line that
+  was approved at hash `3b92f204…`; `owner_approved_hash` deliberately still points at that
+  original content, so the trail reads "approved at X, then amended here by owner decision"
+  rather than carrying a self-referential hash — decided by owner (mid-delivery instruction).
 
 ## Traceability
 

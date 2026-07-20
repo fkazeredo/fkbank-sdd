@@ -168,7 +168,9 @@ flowchart LR
 - Alloy;
 - gitleaks;
 - CodeQL;
-- Dependabot.
+- Trivy (varredura de dependências, containers e IaC).
+
+O Dependabot não é utilizado por decisão do owner — ver `docs/ARCHITECTURE.md` §Stack.
 
 As versões exatas e as decisões canônicas devem permanecer em `docs/ARCHITECTURE.md` e nos ADRs.
 

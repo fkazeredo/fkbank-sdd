@@ -15,7 +15,10 @@ Modulith 2.1 · Spring Data JPA + PostgreSQL 16 · Flyway · Spring Security (OA
 Server + embedded Authorization Server) · springdoc-openapi · Angular 22 (standalone,
 zoneless, signals) · PrimeNG (Aura) + Tailwind 4 · JUnit 5, Testcontainers, ArchUnit, jqwik,
 PIT · Vitest, Playwright · Micrometer/Prometheus/Loki/Alloy/Grafana · Docker Compose ·
-GitHub Actions + gitleaks + Dependabot.
+GitHub Actions + gitleaks. Dependency updates are **not** automated: Dependabot is
+deliberately disabled (owner decision, SPEC-0018 DL-0009) because unattended update PRs
+flood the repository. Dependency vulnerabilities are still gated in CI by the
+`supply-chain-deps` Trivy scan; bumps are applied deliberately, by a person.
 
 Lombok is an approved backend build dependency and must be included when the backend module is
 created. It may remove mechanical Java boilerplate, but it does not define the domain model and
