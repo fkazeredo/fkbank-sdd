@@ -22,7 +22,7 @@ import org.springframework.security.web.util.matcher.MediaTypeRequestMatcher;
  * <ol>
  *   <li>the Authorization Server's own endpoints, which must be matched first so the token and
  *       authorize endpoints are not swallowed by the application's default-deny rule;
- *   <li>the application, where <strong>every</strong> route requires authentication (OR-2).
+ *   <li>the application, where <strong>every</strong> route requires authentication.
  * </ol>
  *
  * <p>The public allowlist is deliberately empty in this slice. {@code /login} and {@code /error}

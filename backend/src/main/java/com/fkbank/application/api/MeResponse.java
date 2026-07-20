@@ -6,7 +6,7 @@ import com.fkbank.domain.identity.AuthenticatedUser;
  * Transport representation of the signed-in principal.
  *
  * <p>A record is correct here: this is boundary data, not domain behavior. It exists so the
- * domain type never becomes JSON (CLAUDE.md invariant 6).
+ * domain type never becomes JSON directly.
  */
 public record MeResponse(String username) {
 

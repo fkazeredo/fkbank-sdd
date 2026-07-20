@@ -21,9 +21,9 @@ import org.junit.jupiter.api.Test;
 /**
  * The hexagonal structure as executable law.
  *
- * <p>These rules are the real product of the walking skeleton: they turn docs/ARCHITECTURE.md
- * §Style from prose a reviewer must remember into a build failure nobody can merge past. Every
- * rule here maps to OR-1 and to CLAUDE.md invariant 6.
+ * <p>Turns the three-root package layout, the direction of dependencies, and the
+ * ubiquitous-language naming rule from prose a reviewer must remember into a build failure
+ * nobody can merge past.
  */
 @AnalyzeClasses(
     packages = "com.fkbank",

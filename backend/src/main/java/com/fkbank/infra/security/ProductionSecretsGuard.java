@@ -8,8 +8,7 @@ import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 
 /**
- * Refuses to start the {@code prod} profile while any development default is still configured
- * (OR-3).
+ * Refuses to start the {@code prod} profile while any development default is still configured.
  *
  * <p>The check runs during context construction, so the failure happens <em>before</em> the web
  * server starts listening: a misconfigured production boot never opens a port, rather than

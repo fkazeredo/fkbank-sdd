@@ -11,7 +11,7 @@ spring:
     open-in-view: false
     hibernate:
       # Flyway owns the schema. Hibernate never alters it: an applied migration is immutable
-      # and a fix is a new migration (OR-4).
+      # and a fix is a new migration.
       ddl-auto: validate
     properties:
       hibernate:
@@ -37,7 +37,7 @@ spring:
             registration:
               client-id: fkbank-spa
               # A browser application cannot keep a secret, so it is a public client and
-              # proves possession of the authorization code with PKCE instead (OR-3).
+              # proves possession of the authorization code with PKCE instead.
               client-authentication-methods:
                 - none
               authorization-grant-types:

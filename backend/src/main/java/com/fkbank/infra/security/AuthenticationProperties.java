@@ -9,8 +9,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * signing key, endpoints) is configured through Spring Boot's own
  * {@code spring.security.oauth2.authorizationserver.*} properties, so nothing is
  * re-implemented here. This type owns only what FKBANK adds — a seeded login that exists
- * solely under the {@code dev} and {@code e2e} profiles (SPEC-0018 DL-0003), and which
- * {@link ProductionSecretsGuard} refuses to let reach production (OR-3).
+ * solely under the {@code dev} and {@code e2e} profiles, which {@link ProductionSecretsGuard}
+ * refuses to let reach production.
  */
 @ConfigurationProperties(prefix = "fkbank.security")
 public class AuthenticationProperties {
