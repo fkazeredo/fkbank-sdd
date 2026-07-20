@@ -11,7 +11,7 @@ spring:
     open-in-view: false
     hibernate:
       # Flyway owns the schema. Hibernate never alters it: an applied migration is immutable
-      # and a fix is a new migration (OR-4).
+      # and a fix is a new migration.
       ddl-auto: validate
     properties:
       hibernate:
@@ -37,7 +37,7 @@ spring:
             registration:
               client-id: fkbank-spa
               # A browser application cannot keep a secret, so it is a public client and
-              # proves possession of the authorization code with PKCE instead (OR-3).
+              # proves possession of the authorization code with PKCE instead.
               client-authentication-methods:
                 - none
               authorization-grant-types:
@@ -52,6 +52,26 @@ spring:
                 - profile
             require-authorization-consent: false
             require-proof-key: true
+
+logging:
+  structured:
+    format:
+      # One JSON object per log line, correlationId (and any other MDC entry) included as a
+      # top-level property (logging.structured.json.context.include below), exceptions in
+      # dedicated error.* fields instead of folded into the message - never a hand-rolled
+      # encoder, this is Spring Boot's own structured-logging support.
+      console: ecs
+    json:
+      context:
+        include: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        # Only these two are web-exposed: health is the public liveness signal, prometheus is
+        # the scrape target (bearer-token protected, like the rest of the API).
+        include: health,prometheus
 
 server:
   # The application always runs behind the nginx edge, which terminates the origin the browser

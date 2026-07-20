@@ -1,6 +1,6 @@
 # Ephemeral end-to-end stack (compose.e2e.yaml). The whole app is published on the single
 # IPv4 origin http://127.0.0.1:8090 through the nginx edge, so the issuer the tokens carry is
-# the origin the browser actually used (DL-0005).
+# the origin the browser actually used.
 fkbank:
   security:
     seeded-login:

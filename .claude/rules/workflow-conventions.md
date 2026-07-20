@@ -16,6 +16,15 @@ Requests, code, tests, identifiers, and comments are English-only. There are no 
 workflow exceptions. Run `tools/workflow/validate-doc-language` before claiming documentation
 conformance.
 
+## Code comments and Javadoc
+
+Comments and Javadoc explain the code to a reader who has never seen the delivery process.
+Never cite `CLAUDE.md`, a spec ID (`SPEC-00NN`), an ADR number, a decision-log entry
+(`DL-00NN`), or a spec's own rule ID (`OR-N`/`BR-N`) inside source comments — write the
+reasoning itself instead of pointing at the document that states it. That traceability
+belongs in the spec's Traceability section and the PR description; both `/build` and
+`/review-pr` check new/changed comments against this rule.
+
 ## ID resolution
 Skill arguments accept `7` ≡ `0007` ≡ `SPEC-0007`. Resolve with glob `docs/specs/*0007*`.
 More than one match ⇒ `HUMAN_DECISION_REQUIRED` (list the matches). No match ⇒ list the

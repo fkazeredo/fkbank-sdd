@@ -13,6 +13,7 @@ import java.util.Set;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.test.context.ActiveProfiles;
@@ -23,7 +24,7 @@ import org.springframework.web.servlet.mvc.method.RequestMappingInfo;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
 /**
- * Default-deny, proven by enumeration rather than by inspection (OR-2).
+ * Default-deny, proven by enumeration rather than by inspection.
  *
  * <p>Every HTTP route FKBANK registers is listed from the live handler mapping and then
  * actually called without credentials. A route that answers anything other than {@code 401}
@@ -39,14 +40,17 @@ class RoutePermissionCompletenessIT {
   /**
    * The explicit public allowlist, empty in this slice by design.
    *
-   * <p>{@code /actuator/health} and {@code /api/version} join it in SPEC-0016. Anything added
-   * here is a deliberate, reviewable decision to expose a route.
+   * <p>Anything added here is a deliberate, reviewable decision to expose a route.
    */
-  private static final Set<String> PUBLIC_ALLOWLIST = Set.of();
+  private static final Set<String> PUBLIC_ALLOWLIST = Set.of("/api/version");
 
   @LocalServerPort private int port;
 
-  @Autowired private RequestMappingHandlerMapping handlerMapping;
+  // Actuator registers its own ControllerEndpointHandlerMapping alongside the regular MVC one;
+  // this test only cares about the routes FKBANK's own controllers register.
+  @Autowired
+  @Qualifier("requestMappingHandlerMapping")
+  private RequestMappingHandlerMapping handlerMapping;
 
   @DynamicPropertySource
   static void datasource(DynamicPropertyRegistry registry) {

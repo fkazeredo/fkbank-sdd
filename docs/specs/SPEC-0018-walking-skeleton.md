@@ -2,7 +2,7 @@
 id: SPEC-0018
 title: Walking skeleton
 slug: walking-skeleton
-status: IN_PROGRESS
+status: IMPLEMENTED
 risk: R3
 profile: critical
 modules: [identity, application, infra]
@@ -15,6 +15,7 @@ planned_sprint: S1
 planned_release: null
 owner_approved_at: 2026-07-20T06:19:40Z
 owner_approved_hash: 3b92f204a3cce77ee8cb897ffe46dd8dcb3e69950ab2e1359c6b0b080b38fe05
+implemented_at: 2026-07-20T08:31:18Z
 split_review_required: true
 ---
 

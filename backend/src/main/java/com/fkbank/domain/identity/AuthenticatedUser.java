@@ -5,17 +5,15 @@ import java.util.Objects;
 /**
  * A person who has proven who they are and is currently signed in.
  *
- * <p>Deliberately a class and not a record (CLAUDE.md invariant 9): this is the
- * lifecycle-bearing identity concept that later slices grow — transaction PIN verification
- * (SPEC-0006), failure counters and lockout, and authorization policy (SPEC-0013). Its state
- * is private, there is no setter and no all-arguments constructor; instances come from the
- * {@link #signedIn(Username)} factory, which is named in the ubiquitous language of the
- * identity context.
+ * <p>A class rather than a record: signed-in identity is a lifecycle-bearing concept expected
+ * to grow behavior over time — verification state, failure tracking, authorization decisions —
+ * beyond the single username it carries today. Its state is private, there is no setter and no
+ * all-arguments constructor; instances come from the {@link #signedIn(Username)} factory, named
+ * in the ubiquitous language of the identity context.
  *
- * <p>The model is intentionally <em>thin by scope</em>, not anemic by neglect: this slice's
- * only requirement is to describe the signed-in principal, and no acceptance criterion asks
- * the domain to decide a permission. Default-deny lives in the security configuration until a
- * spec introduces a real policy, so inventing one here would be speculative.
+ * <p>Thin by scope, not anemic by neglect: this type only describes the signed-in principal and
+ * makes no permission decision. Access control is default-deny in the security configuration
+ * until this domain owns a real authorization policy.
  */
 public final class AuthenticatedUser {
 

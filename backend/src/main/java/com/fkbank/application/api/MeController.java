@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
  * <p>This is the walking skeleton's single protected route: it proves the whole thread —
  * OIDC/PKCE login, token validation by the resource server, and a domain type reaching the
  * edge as a DTO. Reaching it without a valid bearer token yields {@code 401} through the
- * default-deny configuration (OR-2), never a partially-populated body.
+ * default-deny configuration, never a partially-populated body.
  */
 @RestController
 @RequestMapping("/api")

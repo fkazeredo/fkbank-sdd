@@ -22,13 +22,15 @@ import org.springframework.security.web.util.matcher.MediaTypeRequestMatcher;
  * <ol>
  *   <li>the Authorization Server's own endpoints, which must be matched first so the token and
  *       authorize endpoints are not swallowed by the application's default-deny rule;
- *   <li>the application, where <strong>every</strong> route requires authentication (OR-2).
+ *   <li>the application, where every route requires authentication unless it is named on the
+ *       short, explicit public allowlist below.
  * </ol>
  *
- * <p>The public allowlist is deliberately empty in this slice. {@code /login} and {@code /error}
- * are not on it: they are authentication and error-dispatch infrastructure rendered by the
- * framework rather than application routes, and the route-permission completeness test asserts
- * that every route FKBANK itself registers is covered.
+ * <p>The public allowlist names only health, version, and API-documentation surfaces — nothing
+ * that carries business data. {@code /login} and {@code /error} are not on it: they are
+ * authentication and error-dispatch infrastructure rendered by the framework rather than
+ * application routes, and the route-permission completeness test asserts that every route
+ * FKBANK itself registers is covered.
  */
 @Configuration(proxyBeanMethods = false)
 @EnableConfigurationProperties(AuthenticationProperties.class)
@@ -62,12 +64,13 @@ public class SecurityConfig {
   }
 
   /**
-   * The application itself: default-deny.
+   * The application itself: default-deny with a short, explicit public allowlist.
    *
-   * <p>{@code anyRequest().authenticated()} is the whole authorization policy — a route added
-   * later is protected because it exists, not because someone remembered to protect it. An
-   * unauthenticated API call is answered by {@link ProblemDetailAuthenticationEntryPoint} with
-   * {@code 401} and the standard error contract.
+   * <p>{@code anyRequest().authenticated()} remains the fallback for everything not named
+   * above it — a route added later is protected because it exists, not because someone
+   * remembered to protect it. An unauthenticated API call is answered by
+   * {@link ProblemDetailAuthenticationEntryPoint} with {@code 401} and the standard error
+   * contract.
    */
   @Bean
   @Order(2)
@@ -75,7 +78,18 @@ public class SecurityConfig {
       HttpSecurity http, ProblemDetailAuthenticationEntryPoint problemDetailEntryPoint)
       throws Exception {
 
-    http.authorizeHttpRequests(requests -> requests.anyRequest().authenticated())
+    http.authorizeHttpRequests(
+            requests ->
+                requests
+                    .requestMatchers(
+                        pathPattern("/actuator/health"),
+                        pathPattern("/api/version"),
+                        pathPattern("/v3/api-docs/**"),
+                        pathPattern("/swagger-ui/**"),
+                        pathPattern("/swagger-ui.html"))
+                    .permitAll()
+                    .anyRequest()
+                    .authenticated())
         // The API is authenticated by bearer token, never by an ambient cookie, so no CSRF
         // token is required for it. Form login keeps its CSRF protection.
         .csrf(

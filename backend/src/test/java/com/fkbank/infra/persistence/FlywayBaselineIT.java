@@ -18,7 +18,7 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
 /**
- * Proves the migration pipeline against a real PostgreSQL 16 (OR-4).
+ * Proves the migration pipeline against a real PostgreSQL 16.
  *
  * <p>Asserting on {@code flyway_schema_history} rather than on a mocked Flyway is the point:
  * this test fails if the database cannot be reached, if the baseline does not apply, or if a
@@ -58,8 +58,8 @@ class FlywayBaselineIT {
     }
 
     assertThat(applied)
-        .as("the walking skeleton owns exactly one migration; business tables belong to their"
-            + " own specs (SPEC-0001, SPEC-0002)")
+        .as("the walking skeleton owns exactly one migration; business tables arrive later,"
+            + " each with its own migration")
         .singleElement()
         .satisfies(
             migration -> {

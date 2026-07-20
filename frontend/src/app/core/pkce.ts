@@ -4,9 +4,9 @@
  * Kept as pure functions, separate from the service that performs the redirects, so the part
  * that must be exactly right can be asserted directly instead of through a browser journey.
  *
- * No OIDC library is used here deliberately (SPEC-0018 plan, Decision Ladder rung 8): the SPA
- * drives a single flow against our own Authorization Server, and the real security boundary is
- * server-side token validation, not this redirect choreography.
+ * No OIDC library is used here deliberately: the SPA drives a single flow against our own
+ * Authorization Server, and the real security boundary is server-side token validation, not
+ * this redirect choreography.
  */
 
 /** Bytes of entropy in a verifier. RFC 7636 allows 43-128 characters; 32 bytes gives 43. */

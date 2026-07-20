@@ -1,5 +1,7 @@
 package com.fkbank.infra.security;
 
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
@@ -18,15 +20,21 @@ import org.springframework.stereotype.Component;
  *
  * <p>The body is built field by field on purpose: it must never carry a stack trace, an
  * exception class name or any other internal detail that would tell an unauthenticated caller
- * how the system is put together.
+ * how the system is put together. Every call here is also an authorization failure worth
+ * counting, so it increments a metric before writing the response.
  */
 @Component
 public class ProblemDetailAuthenticationEntryPoint implements AuthenticationEntryPoint {
 
   private final ObjectMapper objectMapper;
+  private final Counter authorizationFailures;
 
-  ProblemDetailAuthenticationEntryPoint(ObjectMapper objectMapper) {
+  ProblemDetailAuthenticationEntryPoint(ObjectMapper objectMapper, MeterRegistry meterRegistry) {
     this.objectMapper = objectMapper;
+    this.authorizationFailures =
+        Counter.builder("fkbank.authorization.failures")
+            .description("Requests rejected for missing or invalid authentication")
+            .register(meterRegistry);
   }
 
   @Override
@@ -35,6 +43,8 @@ public class ProblemDetailAuthenticationEntryPoint implements AuthenticationEntr
       HttpServletResponse response,
       AuthenticationException authenticationException)
       throws IOException {
+
+    authorizationFailures.increment();
 
     ProblemDetail problem =
         ProblemDetail.forStatusAndDetail(

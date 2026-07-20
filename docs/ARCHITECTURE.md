@@ -107,6 +107,11 @@ runtime coupling. Domain entities never leave their bounded context and never be
 - Javadoc required on every public delivery endpoint in `application` and every public
   domain use case — the surface a new dev reads first. Not required elsewhere;
   comments explain *why*, not *what*. Checked in review (`/review-pr` and human review), not a CI gate (Rule Zero).
+- Comments and Javadoc are self-contained: they explain the code to a reader who has never
+  seen the delivery process. Never cite `CLAUDE.md`, a spec ID (`SPEC-00NN`), an ADR number,
+  a decision-log entry (`DL-00NN`), or a spec's own rule ID (`OR-N`/`BR-N`) inside source
+  comments or Javadoc — that traceability belongs in the spec's Traceability section and the
+  PR description, not in code that outlives the delivery that wrote it.
 
 ## Persistence
 
