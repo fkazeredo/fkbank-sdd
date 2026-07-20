@@ -149,7 +149,9 @@ Format: `DL-NNNN — YYYY-MM-DD — decision — decided by <owner|architecture|
 | OR-4 (OpenAPI UI + drift gate) | `OpenApiAccessibilityIT` (2 cases) · `OpenApiSnapshotIT` |
 | `/api/version` public | `VersionEndpointIT` |
 | Security allowlist completeness | `RoutePermissionCompletenessIT` (updated) |
+| Observability surface reachable through the deployed edge (QA rework: `@LocalServerPort` integration tests bypass nginx) | `frontend/e2e/observability-edge.spec.ts` (5 cases, QA-owned) |
 
-All under `backend/src/test/java/com/fkbank/infra/observability/` unless noted otherwise
-(`VersionEndpointIT` in `application/api`, `RoutePermissionCompletenessIT` in `infra/security`).
-No E2E/Playwright file — this slice has no frontend surface.
+All backend tests under `backend/src/test/java/com/fkbank/infra/observability/` unless noted
+otherwise (`VersionEndpointIT` in `application/api`, `RoutePermissionCompletenessIT` in
+`infra/security`). This slice has no frontend/UI feature, but does add backend routes exposed
+through the nginx edge, which is exactly what `observability-edge.spec.ts` verifies.

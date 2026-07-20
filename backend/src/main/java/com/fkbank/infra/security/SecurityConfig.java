@@ -22,13 +22,15 @@ import org.springframework.security.web.util.matcher.MediaTypeRequestMatcher;
  * <ol>
  *   <li>the Authorization Server's own endpoints, which must be matched first so the token and
  *       authorize endpoints are not swallowed by the application's default-deny rule;
- *   <li>the application, where <strong>every</strong> route requires authentication.
+ *   <li>the application, where every route requires authentication unless it is named on the
+ *       short, explicit public allowlist below.
  * </ol>
  *
- * <p>The public allowlist is deliberately empty in this slice. {@code /login} and {@code /error}
- * are not on it: they are authentication and error-dispatch infrastructure rendered by the
- * framework rather than application routes, and the route-permission completeness test asserts
- * that every route FKBANK itself registers is covered.
+ * <p>The public allowlist names only health, version, and API-documentation surfaces — nothing
+ * that carries business data. {@code /login} and {@code /error} are not on it: they are
+ * authentication and error-dispatch infrastructure rendered by the framework rather than
+ * application routes, and the route-permission completeness test asserts that every route
+ * FKBANK itself registers is covered.
  */
 @Configuration(proxyBeanMethods = false)
 @EnableConfigurationProperties(AuthenticationProperties.class)

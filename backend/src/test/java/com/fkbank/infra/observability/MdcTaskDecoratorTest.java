@@ -33,16 +33,21 @@ class MdcTaskDecoratorTest {
   void leavesAPooledThreadsPriorContextUndisturbedAfterwards() throws Exception {
     MDC.put("correlationId", "captured-at-submission");
     Runnable decorated = decorator.decorate(() -> {});
+    // Assert on the main thread, not inside the worker: an AssertionError thrown on a plain
+    // Thread is merely uncaught there, so the test would still report green even if this
+    // assertion failed.
+    AtomicReference<String> seenAfterTheDecoratedTaskRan = new AtomicReference<>();
 
     Thread worker = new Thread(() -> {
       MDC.put("correlationId", "already-on-this-pooled-thread");
       decorated.run();
-      assertThat(MDC.get("correlationId")).isEqualTo("already-on-this-pooled-thread");
+      seenAfterTheDecoratedTaskRan.set(MDC.get("correlationId"));
     });
     worker.start();
     worker.join(TimeUnit.SECONDS.toMillis(5));
 
     assertThat(worker.isAlive()).isFalse();
+    assertThat(seenAfterTheDecoratedTaskRan.get()).isEqualTo("already-on-this-pooled-thread");
   }
 
   @Test
