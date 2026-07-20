@@ -95,6 +95,23 @@ Format: `DL-NNNN — YYYY-MM-DD — decision — decided by <owner|architecture|
   and JSON across six emulators, the second adds a second backend toolchain to CI and to every
   future emulator for no capability the Java stack lacks. Recorded as ADR-0002 because it binds
   emulators beyond this slice. Decided by owner.
+- DL-0008 — 2026-07-20 — money is presented in the `pt-BR` locale (`R$ 0,00`), while interface
+  text stays en-US. AC-1's `$0.00` is read as shorthand for a zero balance, the way `docs/DOMAIN.md`
+  writes every BRL figure with a bare `$`, not as a literal rendering requirement. Formatting BRL
+  in en-US (`R$1,234.56`) was rejected: it swaps the decimal separator and the thousands separator
+  for the reader who actually holds the account, and a balance misread by a factor of a thousand is
+  not a cosmetic defect. Rendering a bare `$0.00` was also rejected — it hides that the currency is
+  BRL, which stops being harmless as soon as PIX and boleto amounts appear. This is a documented
+  narrowing of "en-US is the only MVP locale" (`docs/ARCHITECTURE.md` §Frontend): the exception is
+  money formatting only, and it lives in the single money pipe. Decided by owner.
+- DL-0009 — 2026-07-20 — an applicant born on 29 February comes of age on **28 February** in a
+  non-leap year, not 1 March. Counting whole elapsed years (`Period.between`) would have made
+  them wait a day longer than everyone else born in February, which diverges from the civil
+  practice of treating the last day of the month as the anniversary. The window is one day every
+  four years for roughly one applicant in 1,461, but it is an eligibility rule on a money
+  product: refusing someone the law already treats as an adult is the worse of the two errors.
+  Implemented by adding the years to the birth date rather than counting the years between.
+  Decided by owner.
 - DL-0004 — 2026-07-18 — the declared monthly income (BR-1) is modelled by a `MonthlyIncome`
   value object holding a non-negative 2-decimal `BigDecimal`, **not** the ledger's `Money`: it is
   a self-reported reference figure feeding the limits engine (SPEC-0013), never a ledger balance

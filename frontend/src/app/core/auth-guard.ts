@@ -1,4 +1,4 @@
-import { CanActivateFn } from '@angular/router';
+import { CanActivateFn, Router } from '@angular/router';
 import { inject } from '@angular/core';
 import { Auth } from './auth';
 
@@ -7,6 +7,10 @@ import { Auth } from './auth';
  *
  * This is convenience, not security: the backend denies every unauthenticated request by
  * default, so a bypassed guard reveals empty screens rather than data.
+ *
+ * A visitor without a session is sent to the sign-in landing rather than straight out to the
+ * Authorization Server. Someone arriving to open an account would otherwise be redirected into
+ * a form asking for credentials they do not have yet, with no visible way back.
  */
 export const authGuard: CanActivateFn = () => {
   const auth = inject(Auth);
@@ -15,6 +19,5 @@ export const authGuard: CanActivateFn = () => {
     return true;
   }
 
-  void auth.login();
-  return false;
+  return inject(Router).createUrlTree(['/signin']);
 };

@@ -1,9 +1,9 @@
 package com.fkbank.infra.security;
 
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -33,7 +33,6 @@ import org.springframework.security.web.util.matcher.MediaTypeRequestMatcher;
  * FKBANK itself registers is covered.
  */
 @Configuration(proxyBeanMethods = false)
-@EnableConfigurationProperties(AuthenticationProperties.class)
 public class SecurityConfig {
 
   /**
@@ -87,6 +86,20 @@ public class SecurityConfig {
                         pathPattern("/v3/api-docs/**"),
                         pathPattern("/swagger-ui/**"),
                         pathPattern("/swagger-ui.html"))
+                    .permitAll()
+                    // Opening an account is necessarily public: an applicant has no credentials
+                    // until their application succeeds, so there is nothing to authenticate them
+                    // with. The status route is guarded by its identifier, which is generated
+                    // rather than derived from anything about the applicant, and discloses only
+                    // an outcome.
+                    .requestMatchers(
+                        pathPattern(HttpMethod.POST, "/api/signup"),
+                        pathPattern(HttpMethod.GET, "/api/signup/{onboardingId}"))
+                    .permitAll()
+                    // The credit bureau holds no account here, so it cannot present a token. Its
+                    // callbacks authenticate by a signature over the request body, checked in
+                    // the handler before the body is read.
+                    .requestMatchers(pathPattern(HttpMethod.POST, "/api/webhooks/bureau"))
                     .permitAll()
                     .anyRequest()
                     .authenticated())

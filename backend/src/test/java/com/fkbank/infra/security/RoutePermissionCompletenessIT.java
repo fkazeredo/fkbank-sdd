@@ -38,11 +38,19 @@ import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandl
 class RoutePermissionCompletenessIT {
 
   /**
-   * The explicit public allowlist, empty in this slice by design.
+   * The explicit public allowlist.
    *
-   * <p>Anything added here is a deliberate, reviewable decision to expose a route.
+   * <p>Anything added here is a deliberate, reviewable decision to expose a route. The sign-up
+   * routes are public because an applicant has no credentials until their application succeeds;
+   * the callback is public because the credit bureau holds no account here and authenticates by
+   * signing its request body instead.
    */
-  private static final Set<String> PUBLIC_ALLOWLIST = Set.of("/api/version");
+  private static final Set<String> PUBLIC_ALLOWLIST =
+      Set.of(
+          "/api/version",
+          "/api/signup",
+          "/api/signup/{onboardingId}",
+          "/api/webhooks/bureau");
 
   @LocalServerPort private int port;
 

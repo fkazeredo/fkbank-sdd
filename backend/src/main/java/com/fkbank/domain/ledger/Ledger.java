@@ -105,6 +105,23 @@ public class Ledger {
         .orElseThrow(() -> new UnknownAccountException(accountId));
   }
 
+  /**
+   * What the account registered under the given chart-of-accounts code currently holds.
+   *
+   * <p>The code is how the rest of the product names an account — {@code customer:available:42}
+   * rather than a number the accounting core happened to assign — so a module that knows whose
+   * money it is asking about does not have to keep its own copy of an internal identity.
+   *
+   * @throws UnknownAccountException if no account carries that code
+   */
+  public Money balanceOf(String accountCode) {
+    Account account =
+        accounts
+            .findByCode(accountCode)
+            .orElseThrow(() -> UnknownAccountException.withCode(accountCode));
+    return balanceOf(account.id());
+  }
+
   /** Looks up a movement that was recorded. */
   public Optional<Posting> findPosting(PostingId id) {
     return postings.findById(id);

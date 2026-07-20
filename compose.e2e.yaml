@@ -25,8 +25,16 @@ services:
       APP_DB_URL: jdbc:postgresql://db:5432/app
       APP_DB_USERNAME: app
       APP_DB_PASSWORD: app
+      # The bureau is a container on this network, not a process on the host, so the default
+      # loopback address the application ships with would reach nothing here.
+      FKBANK_BUREAU_BASE_URL: http://bureau:9101
+      # The other half of the callback signature. It must equal the emulator's BUREAU_HMAC_SECRET
+      # below; a mismatch surfaces as every callback being rejected as a forgery.
+      FKBANK_BUREAU_HMAC_SECRET: dev-bureau-secret
     depends_on:
       db:
+        condition: service_healthy
+      bureau:
         condition: service_healthy
     healthcheck:
       # Point this at a route that proves the app is SERVING, not that it is open. A protected
@@ -41,6 +49,33 @@ services:
       # 127.0.0.1, never `localhost`: inside the container localhost resolves to IPv6 ::1
       # first, where the server is not listening.
       test: ["CMD-SHELL", "wget -q -S -O /dev/null http://127.0.0.1:8080/api/me 2>&1 | grep -qE ' (401|200) '"]
+      interval: 5s
+      timeout: 3s
+      retries: 40
+
+  bureau:
+    build:
+      context: ./emulators/bureau
+    environment:
+      # Container to container over the compose network: the emulator posts its callback straight
+      # at the backend, which is the whole point of running it as a service rather than a stub.
+      BUREAU_CALLBACK_URL: http://backend:8080/api/webhooks/bureau
+      BUREAU_DEFAULT_SCENARIO: approve
+      # Must equal the backend's FKBANK_BUREAU_HMAC_SECRET above, or every callback is correctly
+      # rejected as a forgery and the timed-out journey never completes.
+      BUREAU_HMAC_SECRET: dev-bureau-secret
+      # Fixed so a scenario that fails in CI fails identically on a developer's machine.
+      BUREAU_SEED: "20260720"
+    ports:
+      # Published, unlike the backend, because the E2E suite drives the control API from the host
+      # to choose what the bureau will answer for the journey it is about to walk. This is the
+      # emulator's own surface, not the application's, so the single-origin rule is untouched.
+      - "127.0.0.1:9101:9101"
+    healthcheck:
+      # The control surface answers 200 as soon as the service is really serving; there is no
+      # protected route here to probe the way the backend's check does. 127.0.0.1, never
+      # `localhost`: inside the container localhost resolves to IPv6 ::1 first.
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:9101/control/scenario"]
       interval: 5s
       timeout: 3s
       retries: 40

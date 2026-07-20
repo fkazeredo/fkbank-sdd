@@ -16,6 +16,9 @@ jobs:
       - name: verify-slice (mirrors tools/quality/verify-slice.sh)
         run: |
           chmod +x tools/quality/*.sh tools/workflow/*.sh tools/git/*.sh tools/release/*.sh
+          # Each emulator is a separate build with its own wrapper, and a checkout does not
+          # carry the executable bit for every one of them.
+          chmod +x emulators/*/mvnw 2>/dev/null || true
           tools/quality/verify-slice.sh
   e2e:
     needs: verify-slice
@@ -64,8 +67,14 @@ jobs:
         run: |
           if [ ! -f backend/mvnw ]; then echo "no backend/mvnw yet (pre-bootstrap) - skipping"; exit 0; fi
           chmod +x backend/mvnw
-          cd backend
-          ./mvnw -B -q dependency:go-offline
+          ( cd backend && ./mvnw -B -q dependency:go-offline )
+          # Emulators ship their own dependency trees, and a vulnerability in one is still a
+          # vulnerability in something this repository builds and runs.
+          for emulator in emulators/*/; do
+            [ -f "$emulator/mvnw" ] || continue
+            chmod +x "$emulator/mvnw"
+            ( cd "$emulator" && ./mvnw -B -q dependency:go-offline )
+          done
       - name: Dependency vulnerabilities (gated) and licenses (reported)
         run: |
           chmod +x tools/security/supply-chain/trivy-scan.sh

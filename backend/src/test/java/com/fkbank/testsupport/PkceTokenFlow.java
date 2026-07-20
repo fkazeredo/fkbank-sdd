@@ -29,8 +29,6 @@ public final class PkceTokenFlow {
 
   private static final String CLIENT_ID = "fkbank-spa";
   private static final String REDIRECT_URI = "http://127.0.0.1:8090/auth/callback";
-  private static final String SEEDED_USERNAME = "e2e.user";
-  private static final String SEEDED_PASSWORD = "e2e-password";
 
   // The generated login form writes the hidden input's attributes in no guaranteed order
   // (`type="hidden"` sits between `name` and `value`), so match either arrangement rather than
@@ -54,12 +52,21 @@ public final class PkceTokenFlow {
             .build();
   }
 
-  /** Obtains an access token for the seeded demo credential. */
-  public String obtainAccessToken() throws Exception {
+  /**
+   * Obtains an access token for a real credential.
+   *
+   * <p>The credential has to have been issued by opening an account: there is no demo user any
+   * more, so a test that wants a token signs somebody up first. That makes every authenticated
+   * test exercise the path a real person takes.
+   *
+   * @param username what the person signs in with, which is their e-mail address
+   * @param password the password they chose at sign-up
+   */
+  public String obtainAccessToken(String username, String password) throws Exception {
     String verifier = randomUrlSafe();
     String challenge = s256(verifier);
 
-    signIn();
+    signIn(username, password);
 
     String authorizeQuery =
         query(
@@ -111,7 +118,7 @@ public final class PkceTokenFlow {
     return matcher.group(1);
   }
 
-  private void signIn() throws Exception {
+  private void signIn(String username, String password) throws Exception {
     HttpResponse<String> loginPage = send(request("/login").GET());
     Matcher csrf = CSRF_INPUT.matcher(loginPage.body());
     if (!csrf.find()) {
@@ -122,8 +129,8 @@ public final class PkceTokenFlow {
     String form =
         query(
             Map.of(
-                "username", SEEDED_USERNAME,
-                "password", SEEDED_PASSWORD,
+                "username", username,
+                "password", password,
                 "_csrf", csrfToken));
 
     HttpResponse<String> signedIn =

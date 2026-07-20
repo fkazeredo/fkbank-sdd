@@ -1,11 +1,13 @@
 # Ephemeral end-to-end stack (compose.e2e.yaml). The whole app is published on the single
 # IPv4 origin http://127.0.0.1:8090 through the nginx edge, so the issuer the tokens carry is
 # the origin the browser actually used.
+#
+# The bureau emulator runs as its own container in the stack, so the journey exercises a real
+# network call, a real timeout and a real signed callback rather than an in-process stand-in.
 fkbank:
-  security:
-    seeded-login:
-      username: e2e.user
-      password: e2e-password
+  bureau:
+    base-url: ${FKBANK_BUREAU_BASE_URL:http://bureau:9101}
+    hmac-secret: ${FKBANK_BUREAU_HMAC_SECRET:dev-bureau-secret}
 
 logging:
   level:

@@ -2,6 +2,8 @@ package com.fkbank.infra.security;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.fkbank.testsupport.ControllableBureau;
+import com.fkbank.testsupport.OnboardingFixture;
 import com.fkbank.testsupport.PkceTokenFlow;
 import com.fkbank.testsupport.PostgresContainer;
 import java.net.URI;
@@ -11,29 +13,36 @@ import java.net.http.HttpResponse;
 import java.time.Duration;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
 /**
- * The walking skeleton's security thread, end to end, against the real configuration.
+ * The security thread, end to end, against the real configuration.
  *
- * <p>Deliberately <em>not</em> a mocked security slice: the acceptance criteria are about what
- * an actual HTTP client experiences, and a {@code @WebMvcTest} with a stubbed principal would
- * pass even if the filter chain were wired wrong. This boots the whole application, drives a
- * genuine authorization-code + PKCE exchange against the embedded Authorization Server, and
- * calls the protected route with the token it issued.
+ * <p>Deliberately <em>not</em> a mocked security slice: the acceptance criteria are about what an
+ * actual HTTP client experiences, and a {@code @WebMvcTest} with a stubbed principal would pass
+ * even if the filter chain were wired wrong. This boots the whole application, drives a genuine
+ * authorization-code + PKCE exchange against the embedded Authorization Server, and calls the
+ * protected route with the token it issued.
+ *
+ * <p>The credential it signs in with is one the product issued by opening an account, not a
+ * seeded one — so this test now also proves that the credentials onboarding creates actually
+ * work at the Authorization Server.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("e2e")
+@Import(ControllableBureau.Configuration.class)
 @DisplayName("GET /api/me")
 class MeEndpointSecurityIT {
 
-  private static final String SEEDED_USERNAME = "e2e.user";
-
   @LocalServerPort private int port;
+
+  @Autowired private OnboardingFixture onboarding;
 
   @DynamicPropertySource
   static void datasource(DynamicPropertyRegistry registry) {
@@ -74,12 +83,15 @@ class MeEndpointSecurityIT {
   @Test
   @DisplayName("answers 200 with the username for a token obtained through the PKCE flow")
   void tokenFromThePkceFlowIsAccepted() throws Exception {
-    String accessToken = new PkceTokenFlow(port).obtainAccessToken();
+    OnboardingFixture.SignedUpCustomer customer = onboarding.approvedCustomer();
+
+    String accessToken =
+        new PkceTokenFlow(port).obtainAccessToken(customer.username(), customer.password());
 
     HttpResponse<String> response = get("/api/me", accessToken);
 
     assertThat(response.statusCode()).isEqualTo(200);
-    assertThat(response.body()).isEqualTo("{\"username\":\"" + SEEDED_USERNAME + "\"}");
+    assertThat(response.body()).isEqualTo("{\"username\":\"" + customer.username() + "\"}");
   }
 
   private HttpResponse<String> get(String path, String bearerToken) throws Exception {

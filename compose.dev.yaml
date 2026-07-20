@@ -20,15 +20,36 @@ services:
     volumes:
       - app-dev-db:/var/lib/postgresql/data
 
-  # Add opt-in emulators/stubs for external integrations here, behind a profile so they only
-  # start when asked for:
-  #
-  #   some-emulator:
-  #     build: { context: ./emulators/some-emulator }
-  #     profiles: ["emulators"]
-  #     ports: ["127.0.0.1:9101:9101"]
+  # Emulators of external systems live behind the `emulators` profile, so they only start when
+  # asked for:
   #
   #   docker compose -f compose.dev.yaml --profile emulators up
+  bureau:
+    build:
+      context: ./emulators/bureau
+    profiles: ["emulators"]
+    ports:
+      - "127.0.0.1:9101:9101"
+    environment:
+      # In this profile the application runs on the developer's machine rather than in a
+      # container, so the callback has to leave the container network to reach it.
+      BUREAU_CALLBACK_URL: http://host.docker.internal:8080/api/webhooks/bureau
+      BUREAU_DEFAULT_SCENARIO: approve
+      # Must equal the application's own fkbank.bureau.hmac-secret, or every callback this
+      # emulator sends is correctly rejected as a forgery. Both sides default to this value.
+      BUREAU_HMAC_SECRET: dev-bureau-secret
+    extra_hosts:
+      # Docker Desktop resolves this name on its own; a plain Linux daemon does not, and without
+      # the mapping every callback fails with an unresolved host on exactly one team member's box.
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      # The emulator's own control surface answers 200 as soon as it is really serving. busybox
+      # wget is what the JRE-on-Alpine image ships, and 127.0.0.1 rather than `localhost` because
+      # inside the container localhost resolves to IPv6 ::1 first, where nothing is listening.
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:9101/control/scenario"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
 
 volumes:
   app-dev-db:

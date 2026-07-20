@@ -85,4 +85,57 @@ class FlywayBaselineIT {
 
     assertThat(tables).contains("account", "posting", "balance", "event_publication");
   }
+
+  @Test
+  @DisplayName("creates the tables that opening an account needs")
+  void createsTheOnboardingTables() throws Exception {
+    assertThat(publicTables())
+        .contains("customer", "credential", "current_account", "onboarding");
+  }
+
+  @Test
+  @DisplayName("allows only one pending application per CPF, and only while it is pending")
+  void enforcesOnePendingApplicationPerCpf() throws Exception {
+    record PartialIndex(String name, String definition) {}
+
+    List<PartialIndex> indexes = new ArrayList<>();
+    try (Connection connection = dataSource.getConnection();
+        Statement statement = connection.createStatement();
+        ResultSet rows =
+            statement.executeQuery(
+                "SELECT indexname, indexdef FROM pg_indexes"
+                    + " WHERE tablename = 'onboarding'")) {
+      while (rows.next()) {
+        indexes.add(new PartialIndex(rows.getString("indexname"), rows.getString("indexdef")));
+      }
+    }
+
+    assertThat(indexes)
+        .as(
+            "the index is what settles two concurrent submissions for one person; without it the"
+                + " application-level check loses the race silently")
+        .anySatisfy(
+            index -> {
+              assertThat(index.definition()).contains("UNIQUE");
+              assertThat(index.definition()).contains("cpf");
+              assertThat(index.definition())
+                  .as("a refused applicant must not be barred from applying again")
+                  .contains("WHERE (status = 'PENDING'::text)");
+            });
+  }
+
+  private List<String> publicTables() throws Exception {
+    List<String> tables = new ArrayList<>();
+    try (Connection connection = dataSource.getConnection();
+        Statement statement = connection.createStatement();
+        ResultSet rows =
+            statement.executeQuery(
+                "SELECT table_name FROM information_schema.tables"
+                    + " WHERE table_schema = 'public'")) {
+      while (rows.next()) {
+        tables.add(rows.getString("table_name"));
+      }
+    }
+    return tables;
+  }
 }
