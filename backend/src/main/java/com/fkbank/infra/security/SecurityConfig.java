@@ -79,7 +79,12 @@ public class SecurityConfig {
     http.authorizeHttpRequests(
             requests ->
                 requests
-                    .requestMatchers(pathPattern("/actuator/health"), pathPattern("/api/version"))
+                    .requestMatchers(
+                        pathPattern("/actuator/health"),
+                        pathPattern("/api/version"),
+                        pathPattern("/v3/api-docs/**"),
+                        pathPattern("/swagger-ui/**"),
+                        pathPattern("/swagger-ui.html"))
                     .permitAll()
                     .anyRequest()
                     .authenticated())
