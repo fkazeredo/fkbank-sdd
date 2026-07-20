@@ -42,4 +42,19 @@ no direct push, no force-push, required status checks — before the first relea
 environment exposed to end users. Owner: fkazeredo. Deadline: before the first production
 release, per the production-release definition in `.claude/workflow-policy.yml`.
 
-**Affected SHA.** `068d94f` (Sprint 1 candidate) and every SHA before it.
+**Affected SHA.** Every SHA in the `v0.1.0` pre-release window, which is the window the decision
+above scopes. Named explicitly: `d9aad61`, `068d94f` and `3dec822` (the `release/0.1.0` tip under
+assurance run 3). The finding is a property of the GitHub repository's configuration, not of any
+commit's content, so it holds identically on every one of them.
+
+> **Amendment — 2026-07-20, security-assurance run 3.** As first written this line read
+> "`068d94f` (Sprint 1 candidate) and every SHA before it", which by its own words excluded
+> `3dec822` — a *descendant* of `068d94f` and the actual candidate under assurance. The
+> acceptance would have gone stale the moment the candidate advanced, which is precisely what the
+> track's affected-SHA requirement exists to prevent. Corrected by the security-assurance worker
+> to name the window the decision already scoped. **No term of the owner's decision was changed:**
+> not its scope (the `v0.1.0` internal pre-release window), not its conditions, not its
+> remediation deadline, and not its recorded consequence that `SECURITY_VERIFIED` is unavailable.
+> The underlying finding was independently re-confirmed on `3dec822` (rulesets `[]`,
+> `branches/develop/protection` 404, `main` absent from `origin`). If the owner intended a
+> narrower SHA scope than the stated window, this amendment is the thing to reverse.
