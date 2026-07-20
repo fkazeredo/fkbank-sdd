@@ -289,6 +289,16 @@ Responsibilities:
 
 QA never changes production code.
 
+**The boundary lasts as long as the cycle, not forever.** While QA owns the work, the main agent
+leaves QA's artifacts alone and a wrong QA test goes back to QA. Once QA's cycles are spent, or
+QA hands back a finding it will not act on, the work has returned to the main agent — and the
+main agent then owns every file, including QA's. It edits them directly under the `qa` role, so
+the hook audit still records who wrote what, rather than leaving a known defect in the tree
+because a boundary has no one on the other side.
+
+What does not move is the independence of *verdicts*: the main agent never declares its own QA
+verdict, and no orchestration may turn an independent worker's judgement into self-approval.
+
 ### `pr-reviewer`
 
 Independent read-only responsibility invoked automatically when risk or evidence requires it.
@@ -412,6 +422,20 @@ A new production dependency requires human approval.
 # Human Decision Gate
 
 No material uncertainty may be resolved silently.
+
+**An open question is never closed by the agent's own judgement, however well reasoned.** When a
+question is genuinely open, the agent stops, asks the owner, and always states a recommendation.
+Presenting options without recommending one pushes the work back onto the owner; deciding without
+asking takes it away from them. The agent does both: facts, options with trade-offs, and the one
+it would pick, with why.
+
+Asking replaces deciding alone — it does not replace writing the answer down. Every answered
+question is recorded durably: the spec's Decision Log, an ADR, the security document, the release
+state, or the manual. A decision that was never recorded gets re-litigated; a decision that was
+never asked about was never the agent's to make.
+
+Applying a rule that is already written is not deciding an open question — it is reading. The
+exemptions are unchanged and listed in `.claude/rules/human-decision-gate.md`.
 
 The agent stops when there is:
 

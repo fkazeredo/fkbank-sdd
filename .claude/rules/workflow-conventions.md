@@ -83,6 +83,26 @@ cycle · 1 automatic
 CI fix · 1 flaky retry (diagnosis only) · 2 attempts on the same failure · 3 spec interview
 blocks · 15 min CI watch · 0 merges · 0 force pushes.
 
+## Never decide an open question alone (owner-reinforced, 2026-07-20)
+
+An open question is never closed by the agent's own judgement, however well reasoned. When a
+question is genuinely open — a conflict, an ambiguity, a material technical or scope choice, a
+gate that cannot be met, a rule that turns out to be unexecutable — **stop and ask the owner,
+and always state a recommendation.** Presenting options without recommending one pushes the
+work back onto the owner; deciding without asking takes it away from them. Do both: the facts,
+the options with trade-offs, and the one you would pick, with why.
+
+This does not license silence in the other direction. **Keep recording decisions durably** —
+the spec's Decision log, an ADR, the security document, the release state, the manual, per
+`human-decision-gate.md` §Durable record destination. Ask first, then write the answer down
+where it outlives the session. A decision that was never recorded will be re-litigated; a
+decision that was never asked about was never the agent's to make.
+
+What still does NOT require asking is unchanged and listed in `human-decision-gate.md`
+§What does NOT require asking: a written rule, an existing unequivocal pattern, a reversible
+local choice, formatter output, and the autonomous push/PR boundary above. Applying a rule that
+is already written is not deciding an open question — it is reading.
+
 ## Questions in batch
 In `/spec` and `/design-slice`, accumulate material doubts and present ONE Human Decision
 Request per checkpoint (targets: ≤1 for R2, ≤2 for R3 after the interview). Targets never

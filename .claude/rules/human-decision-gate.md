@@ -31,6 +31,11 @@ convention.
 into `.claude/runtime/<id>/decision-request.md`. 4. Present facts + sources. 5. Options with
 trade-offs. 6. Recommend one. 7. Wait. 8. Record the decision durably. 9. Resume.
 
+Steps 6 and 7 are not optional and not interchangeable (owner-reinforced, 2026-07-20). Never
+close an open question on your own judgement, and never hand the owner a menu without saying
+which option you would take and why. Step 8 is equally binding: asking replaces deciding alone,
+it does not replace writing the answer down.
+
 ## Durable record destination
 Business → the spec (Decision log) · Architecture → ADR · Security → security document ·
 Risk → accepted risk · Reversible/local → runtime · Release → release state · User-facing →

@@ -19,3 +19,10 @@ Machine-derived transitions do not create Human Decision Requests.
 
 The operator must record the decision in the spec Decision Log, ADR, baseline document, or
 Security Assurance track according to `.claude/rules/human-decision-gate.md`.
+
+## Resolved owner decisions
+
+| ID | Decision | Date | Recorded in |
+|---|---|---|---|
+| HD-12 | File ownership follows the cycle. Once an independent worker's cycles are spent, or it hands back a finding it will not act on, the work has returned to the main agent, which then owns every file including that worker's — edited under the worker's role so the hook audit stays truthful. The boundary is a separation of responsibility during the cycle, never a reason to leave a known defect in the tree. Independence of verdicts is unchanged and absolute. | 2026-07-20 | `.claude/rules/qa-ownership.md` §Bidirectional boundary · operational workflow guide (both editions) |
+| HD-13 | An open question is never closed by the agent's own judgement. The agent stops, asks the owner, and always states a recommendation — options without a recommendation hand the work back, a decision without a question takes it away. Asking does not replace recording: every answer goes somewhere durable. | 2026-07-20 | `.claude/rules/workflow-conventions.md` §Never decide an open question alone · `.claude/rules/human-decision-gate.md` §Procedure · operational workflow guide (both editions) |

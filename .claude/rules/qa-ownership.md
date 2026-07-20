@@ -28,10 +28,24 @@
 (Day-0 alternative: a separate `acceptance-tests/` module — decide against the real build.)
 
 ## Bidirectional boundary
-QA never edits builder-owned tests; the builder never edits QA-owned tests during the normal
-cycle. An incorrect QA test goes back to QA; a valid finding goes to the builder. Exceptions
-require a recorded human decision. Authorship metric: hook audit + session role + the
-phase's commit range — never `git log --author` (all sessions share the operator identity).
+QA never edits builder-owned tests. The builder does not edit QA-owned tests *while QA still
+owns the work* — an in-flight QA cycle keeps its own artifacts. A valid finding goes to the
+builder; an incorrect QA test goes back to QA **for as long as QA has a cycle left**.
+
+**When the work has returned to the main agent, the main agent owns every file** (owner
+decision, 2026-07-20). Once QA's cycles are spent, or QA has handed back a finding it will not
+act on, the main agent edits QA-owned files directly instead of stalling on a boundary that has
+no one on the other side. The boundary is a separation of responsibility during the cycle, not
+a permanent lock, and it is never a reason to leave a known defect in the tree. Do it under the
+`qa` role (`tools/workflow/start-phase`) so the hook audit still records who wrote what, and
+say in the commit message that the main agent picked the work up and why.
+
+Independence of *verdicts* is what matters and is unchanged: the main agent still may not
+declare its own QA verdict, and orchestration must never turn an independent worker's judgement
+into self-approval (CLAUDE.md invariant 7).
+
+Authorship metric: hook audit + session role + the phase's commit range — never
+`git log --author` (all sessions share the operator identity).
 
 ## Conduct
 Do not re-run the battery `dev-verification.md` attests (exception: checks the build does

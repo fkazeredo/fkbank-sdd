@@ -8,6 +8,9 @@ disable-model-invocation: true
 
 Read `.claude/rules/workflow-conventions.md` first (limits!). Role: `builder` (path-guard
 denies QA-owned paths). Orchestration resets phase-local context from persisted state.
+Once QA has no cycle left, or hands back a finding it will not act on, the work has returned to
+the main agent and QA-owned files are its to fix — do that under the `qa` role so the hook audit
+stays truthful (`.claude/rules/qa-ownership.md` §Bidirectional boundary).
 
 ## Preconditions (one of)
 - R2+: `state.json` = PLAN_APPROVED and the approval record exists in the plan.
