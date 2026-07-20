@@ -2,7 +2,7 @@
 id: SPEC-0016
 title: Observability baseline
 slug: observability-baseline
-status: IN_PROGRESS
+status: IMPLEMENTED
 risk: R2
 profile: standard
 modules: [application, infra]
@@ -15,6 +15,7 @@ planned_sprint: S1
 planned_release: null
 owner_approved_at: 2026-07-20T08:48:16Z
 owner_approved_hash: 4fec593f77cee9b39b6d0b211d9ab0b348f4c0e36676c0f390d2ec2abb1b7302
+implemented_at: 2026-07-20T11:21:11Z
 split_review_required: true
 ---
 
