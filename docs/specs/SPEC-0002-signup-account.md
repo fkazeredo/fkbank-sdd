@@ -2,12 +2,12 @@
 id: SPEC-0002
 title: Sign-up and account opening
 slug: signup-account
-status: READY
+status: IN_PROGRESS
 risk: R3
 profile: critical
 modules: [onboarding, customer, identity, account]
 depends_on: [SPEC-0001]
-relevant_adrs: []
+relevant_adrs: [ADR-0002]
 reading_list:
   domain: ["Module map (onboarding, customer, identity, account)", "Cross-cutting rules"]
   architecture: ["Backend", "Security", "Emulators"]
@@ -74,6 +74,27 @@ Format: `DL-NNNN — YYYY-MM-DD — decision — decided by <owner|architecture|
   non-positive amounts (both SPEC-0001, immutable). No acceptance criterion requires a
   posting row (AC-1 requires `balance $0.00` on home). Decided by architecture (derived from
   the durable ledger schema + contract; no new decision).
+- DL-0005 — 2026-07-20 — the slice is built whole, not split. The one-session fit check flags
+  six of eight slice-too-big signals (four new bounded contexts, the first emulator service, a
+  change to the OIDC credential path, three screens, expected compaction during `/build`), and
+  the natural seam is `OnboardingApproved → AccountOpened`. Split rejected: the journey "a
+  person opens an account and logs in" delivers no customer value in halves, and the sprint
+  scoping already treats it as one delivery. Decided by owner.
+- DL-0006 — 2026-07-20 — the bureau integration is **synchronous with an asynchronous webhook
+  completion**, not synchronous only. The bureau answers inline when it can; the `delay`
+  scenario answers later through a signed callback that completes the onboarding, and
+  `duplicate-webhook` proves that callback is idempotent by onboarding id (M2's natural-key
+  form). Synchronous-only was rejected on two grounds: it makes `PENDING` a state the system
+  can never leave — BR-5 says a resubmission *returns* the pending onboarding, not that it
+  re-calls the bureau, so a person whose call timed out could never open an account — and it
+  would silently drop the `duplicate-webhook` scenario the Impact and Edge cases sections both
+  name. Decided by owner.
+- DL-0007 — 2026-07-20 — the bureau emulator is a minimal Spring Boot service in its own Maven
+  module under `emulators/bureau`, establishing the pattern the remaining five emulators
+  follow. Plain-Java HTTP and Node/Express were rejected: the first repeats hand-rolled routing
+  and JSON across six emulators, the second adds a second backend toolchain to CI and to every
+  future emulator for no capability the Java stack lacks. Recorded as ADR-0002 because it binds
+  emulators beyond this slice. Decided by owner.
 - DL-0004 — 2026-07-18 — the declared monthly income (BR-1) is modelled by a `MonthlyIncome`
   value object holding a non-negative 2-decimal `BigDecimal`, **not** the ledger's `Money`: it is
   a self-reported reference figure feeding the limits engine (SPEC-0013), never a ledger balance
