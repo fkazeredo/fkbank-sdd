@@ -161,14 +161,20 @@ class ArchitectureTest {
       public void check(JavaClass item, ConditionEvents events) {
         String packageName = item.getPackageName();
         String relative = packageName.substring("com.fkbank.domain".length());
-        // "" is the domain root itself; ".identity" is a context; ".identity.model" is not.
-        boolean flat = relative.isEmpty() || relative.chars().filter(c -> c == '.').count() == 1;
-        if (!flat) {
-          events.add(
-              SimpleConditionEvent.violated(
-                  item,
-                  "%s sits in a grouping subpackage (%s); bounded contexts are flat"
-                      .formatted(item.getName(), packageName)));
+        // Exactly one segment: ".identity" is a bounded context. "" is the domain root, where a
+        // class belongs to no context at all, and ".identity.model" is a grouping subpackage.
+        // Both are violations - the first would otherwise be a hole big enough for a shared
+        // "common domain" package to grow in.
+        long depth = relative.chars().filter(character -> character == '.').count();
+        if (depth != 1) {
+          String message =
+              relative.isEmpty()
+                  ? ("%s sits directly in com.fkbank.domain; every domain type belongs to a"
+                          + " bounded context")
+                      .formatted(item.getName())
+                  : "%s sits in a grouping subpackage (%s); bounded contexts are flat"
+                      .formatted(item.getName(), packageName);
+          events.add(SimpleConditionEvent.violated(item, message));
         }
       }
     };
