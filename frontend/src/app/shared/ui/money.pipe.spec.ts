@@ -3,11 +3,14 @@ import { MoneyPipe } from './money.pipe';
 
 /**
  * `Intl` separates the currency symbol from the digits with a non-breaking space in this locale.
- * Writing that character into every expectation makes the tests unreadable and invites someone
- * to "fix" it into a normal space, so it is normalized once here instead.
+ * Writing that character into every expectation makes the tests unreadable and invites someone to
+ * "fix" it into a normal space, so it is normalized once here instead. It is built from its code
+ * point rather than typed: the literal character is invisible in a diff and reads as a stray typo.
  */
+const NON_BREAKING_SPACE = String.fromCharCode(160);
+
 function formatted(value: string): string {
-  return value.replace(/ /g, ' ');
+  return value.split(NON_BREAKING_SPACE).join(' ');
 }
 
 describe('MoneyPipe', () => {
