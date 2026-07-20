@@ -70,7 +70,7 @@ jobs:
         run: |
           chmod +x tools/security/supply-chain/trivy-scan.sh
           tools/security/supply-chain/trivy-scan.sh deps
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: trivy-deps-reports
@@ -97,7 +97,7 @@ jobs:
           tools/security/supply-chain/trivy-scan.sh images || images_rc=$?
           echo "config exit=$config_rc, images exit=$images_rc"
           [ "$config_rc" -eq 0 ] && [ "$images_rc" -eq 0 ]
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: trivy-container-iac-reports
