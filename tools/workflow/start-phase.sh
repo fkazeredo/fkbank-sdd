@@ -11,6 +11,15 @@ import datetime,json,sys
 json.dump({'slice':sys.argv[2],'status':sys.argv[3],'risk':sys.argv[4],'base_sha':sys.argv[5],'updated':datetime.datetime.now(datetime.timezone.utc).isoformat()},open(sys.argv[1],'w'),indent=2)
 PY
 printf '%s' "$ROLE" > "$ROOT/.claude/runtime/current-role"; printf '%s' "$ID" > "$ROOT/.claude/runtime/current-slice"
+# A background worker and the agent that spawned it share this directory, and each call to
+# start-phase overwrites the other's role - fine when it narrows the caller's rights, dangerous
+# when it widens them. The per-session copy lets the guard resolve the role of the session
+# actually making the call; the shared file stays for tools that have no session.
+if [ -n "${CLAUDE_CODE_SESSION_ID:-}" ]; then
+  mkdir -p "$ROOT/.claude/runtime/roles"
+  SAFE_SESSION="$(printf '%s' "$CLAUDE_CODE_SESSION_ID" | tr -c '0-9A-Za-z._-' '_')"
+  printf '%s' "$ROLE" > "$ROOT/.claude/runtime/roles/$SAFE_SESSION"
+fi
 python3 - "$ROOT/.claude/runtime/phase-manifest.json" "$ROLE" "$PHASE" "$@" <<'PY'
 import json,sys
 json.dump({'role':sys.argv[2],'phase':sys.argv[3],'allowed_paths':sys.argv[4:]},open(sys.argv[1],'w'),indent=2)

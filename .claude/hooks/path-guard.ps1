@@ -5,9 +5,23 @@ if (-not $filePath) { $filePath = [string]$payload.tool_input.path }
 if (-not $filePath) { exit 0 }
 $projectRoot = if ($env:CLAUDE_PROJECT_DIR) { $env:CLAUDE_PROJECT_DIR } else { (Get-Location).Path }
 $runtimeRoot = Join-Path $projectRoot '.claude/runtime'
-$roleFile = Join-Path $runtimeRoot 'current-role'
-if (-not (Test-Path -LiteralPath $roleFile)) { exit 0 }
-$role = (Get-Content -LiteralPath $roleFile -Raw).Trim()
+# Prefer the role this session declared over the shared file, which a concurrently running worker
+# may have overwritten. Falls back to the shared file whenever no session-scoped record exists,
+# so behaviour is unchanged everywhere this does not apply.
+$role = ''
+$session = $env:CLAUDE_CODE_SESSION_ID
+if ($session) {
+  $safe = ($session -replace '[^0-9A-Za-z._-]', '_')
+  $sessionRoleFile = Join-Path $runtimeRoot (Join-Path 'roles' $safe)
+  if (Test-Path -LiteralPath $sessionRoleFile) {
+    $role = (Get-Content -LiteralPath $sessionRoleFile -Raw).Trim()
+  }
+}
+if (-not $role) {
+  $roleFile = Join-Path $runtimeRoot 'current-role'
+  if (-not (Test-Path -LiteralPath $roleFile)) { exit 0 }
+  $role = (Get-Content -LiteralPath $roleFile -Raw).Trim()
+}
 if (-not $role) { exit 0 }
 $p = $filePath.Replace('\','/')
 $root = $projectRoot.Replace('\','/').TrimEnd('/')

@@ -48,6 +48,15 @@ After each transition:
 4. Return a structured state/evidence result to orchestration. Only the top-level command
    prints a compact terminal summary and resume command.
 
+**Role state is per session, not global.** `tools/workflow/start-phase` writes the declared role to
+`.claude/runtime/roles/<session>` as well as to the shared `current-role`, and the path guard reads
+the session-scoped file first. A background worker and the agent that spawned it share the runtime
+directory, so whichever called `start-phase` last used to decide what *everyone* could write —
+harmless when it narrowed the caller's rights, and a hole when it widened them. The shared file is
+still written and is still the fallback, so anything without a session behaves exactly as before.
+Nothing about this changes how a phase is declared: keep calling `start-phase`, once per
+transition.
+
 In-progress states (a session must never end on these): SPECIFYING, DESIGNING, BUILDING,
 QA_RUNNING, PR_PREPARING, CI_REWORK, RELEASE_PREPARING, RELEASE_FINALIZING,
 HOTFIX_SCOPING, HOTFIX_FINALIZING. A phase must declare its finite terminal states. If one
