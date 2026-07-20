@@ -2,7 +2,7 @@
 id: SPEC-0002
 title: Sign-up and account opening
 slug: signup-account
-status: IN_PROGRESS
+status: IMPLEMENTED
 risk: R3
 profile: critical
 modules: [onboarding, customer, identity, account]
@@ -15,6 +15,7 @@ planned_sprint: S1
 planned_release: null
 owner_approved_at: 2026-07-20T15:35:08Z
 owner_approved_hash: 3245eef9fc8e761ead5279aca5570146e78fdd17279ef2cc42c0a36991bfceb7
+implemented_at: 2026-07-20T21:06:56Z
 ---
 
 # SPEC-0002 — Sign-up and account opening
