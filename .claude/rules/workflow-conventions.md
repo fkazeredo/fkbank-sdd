@@ -138,6 +138,53 @@ Every claim of success points to a command + its output, a test, a diff, an arti
 observed behavior. Declare skipped checks and why. Never state "CI passed" when no required
 checks are configured — say "No required CI checks are configured."
 
+**Evidence has to discriminate.** Pointing at a command is not enough: a signal that would look
+exactly the same if the claim were false is a coincidence wearing the costume of proof. Before
+citing a signal, ask what it would show if you were wrong. If the answer is "the same thing", it
+proves nothing and must not be offered.
+
+A worked example, because this failure is easy to repeat. "A `java` process is running, so the
+build is running" is not evidence: an editor's language server is a `java` process and is there
+whether or not anything is building. "Containers for this project report an uptime of seconds" is
+evidence: nothing brings a compose stack up by accident. Both came from a real command against a
+real machine; only one of them could have come out differently.
+
+## Monitoring a background worker
+
+A phase that spawns an independent worker — QA, review, security — cannot finish until that
+worker answers. Two things must be true while it waits, and neither is optional.
+
+**Write down what you are waiting for.** When a worker is spawned, the phase writes
+`.claude/runtime/<id>/awaiting.json`, and deletes it when the worker returns:
+
+```json
+{
+  "waiting_on": "independent qa-engineer worker, run 2 of 2",
+  "since": "2026-07-20T20:05:00Z",
+  "resumes_when": "the worker returns its verdict and the harness re-invokes the session",
+  "liveness": "docker ps for this project's compose stack; writes under the worker's own paths"
+}
+```
+
+It exists so a wait is legible from outside the session: the operator, the stop guard and the next
+session can all tell an ongoing wait from an abandoned phase without interrogating the agent that
+stopped answering.
+
+**The worker's completion notification is authoritative. Nothing else is.** Do not poll for it,
+and never infer a verdict from artifacts the worker happens to have written — a report on disk is
+not a verdict until the worker says it is. Run `tools/workflow/worker-status <id>` when liveness
+is genuinely in doubt; it gathers the signals that discriminate and states plainly which ones it
+could not obtain.
+
+Two traps, both hit while delivering SPEC-0002:
+
+- **Silence is not death.** A worker running a long verification writes nothing for ten minutes or
+  more, because the build does not touch the files being watched. Timestamps go blind for exactly
+  as long as the most interesting phase lasts.
+- **A process list is not liveness.** Matching on a runtime's name finds every unrelated process
+  that shares it. Prefer a signal tied to this project — its compose stack, its own paths — over
+  one tied to a language.
+
 ## Every delivery: user-facing docs, then CI monitoring and correction
 Before opening the PR (`/pr`), update the user-facing docs the delivery touched: the user
 manual under `docs/manual/**` in **both en-US and pt-BR**, and the English `README.md` (the
