@@ -54,6 +54,10 @@ spring:
             require-proof-key: true
 
 server:
+  # The application always runs behind the nginx edge, which terminates the origin the browser
+  # actually used. Without this, self-referencing redirects and the OIDC issuer are built from
+  # the container's own address instead of the public one.
+  forward-headers-strategy: framework
   error:
     # An error body must never hand an unauthenticated caller a stack trace or the internals
     # behind it.
