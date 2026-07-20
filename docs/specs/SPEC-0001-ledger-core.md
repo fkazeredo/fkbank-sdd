@@ -118,6 +118,14 @@ alongside it.
   same document, CLAUDE.md invariant 6 and the ArchUnit flatness rule require the former; the
   executable rule and the existing `domain.identity` layout decide — decided by the architecture
   baseline. The stale prose is flagged for a follow-up documentation fix.
+- DL-0015 — 2026-07-20 — OPEN (accepted, LOW): QA run 2 found two test-quality gaps after the
+  rework budget was spent. QA-09 — `LedgerMetricsIT.ignoresARolledBackPosting` cannot fail,
+  because the refusal it provokes is raised before the event is ever published; the after-commit
+  behaviour is genuinely guarded by the QA-owned `LedgerMetricAcceptanceIT`, not by that test.
+  QA-10 — nothing asserts the stable `UNKNOWN_ACCOUNT` / `UNKNOWN_POSTING` codes, so a silent
+  return to an untyped exception would not be caught. Neither affects behaviour and neither
+  blocks the slice; both are left for an owner call rather than fixed outside the one permitted
+  rework cycle — decided by policy (QA budget exhausted).
 - DL-0014 — 2026-07-20 — OPEN: the architecture's "PIT ≥60% on money-moving modules" floor is
   configured but not evidenced. PIT's coverage minion crashes at start-up on the development
   machine (`UNKNOWN_ERROR`) across the two permitted correction attempts; the profile ships
