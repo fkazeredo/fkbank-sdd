@@ -34,6 +34,9 @@ class OnboardingEntity {
   @Column(name = "password_hash", nullable = false)
   private String passwordHash;
 
+  @Column(name = "bureau_reference", nullable = false, unique = true)
+  private UUID bureauReference;
+
   @Column(nullable = false)
   private String status;
 
@@ -58,9 +61,11 @@ class OnboardingEntity {
       LocalDate birthDate,
       BigDecimal monthlyIncome,
       String passwordHash,
+      UUID bureauReference,
       String status,
       Instant updatedAt) {
     this.id = id;
+    this.bureauReference = bureauReference;
     this.cpf = cpf;
     this.fullName = fullName;
     this.email = email;
@@ -97,6 +102,10 @@ class OnboardingEntity {
 
   String getPasswordHash() {
     return passwordHash;
+  }
+
+  UUID getBureauReference() {
+    return bureauReference;
   }
 
   String getStatus() {

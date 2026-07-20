@@ -13,5 +13,12 @@ package com.fkbank.domain.onboarding;
  */
 public interface BureauCheck {
 
+  /**
+   * Asks about an applicant, naming the application by the reference the bank generated for it.
+   *
+   * <p>That reference, not the onboarding's own identifier, is what the bureau echoes back in a
+   * callback — the identifier is public and would let anyone holding a signing key name a real
+   * application to decide.
+   */
   BureauDecision decide(Onboarding onboarding);
 }

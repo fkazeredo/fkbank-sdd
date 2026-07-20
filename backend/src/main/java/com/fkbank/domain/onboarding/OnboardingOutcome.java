@@ -61,10 +61,32 @@ public class OnboardingOutcome {
    */
   public OnboardingView apply(OnboardingId id, BureauDecision decision) {
     Objects.requireNonNull(id, "onboarding id must not be null");
-    Objects.requireNonNull(decision, "bureau decision must not be null");
 
-    Onboarding onboarding =
-        onboardings.findById(id).orElseThrow(() -> new UnknownOnboardingException(id));
+    return settle(
+        onboardings.findById(id).orElseThrow(() -> new UnknownOnboardingException(id)), decision);
+  }
+
+  /**
+   * Settles the application the bureau names in a callback.
+   *
+   * <p>The lookup is by the reference the bank generated and disclosed only to the bureau. Going
+   * through the onboarding's own identifier here would mean a caller holding a signing key could
+   * decide any application whose identifier they had seen — and applicants are given theirs.
+   *
+   * @throws UnknownBureauReferenceException if no application carries that reference
+   */
+  public OnboardingView applyTo(BureauReference reference, BureauDecision decision) {
+    Objects.requireNonNull(reference, "bureau reference must not be null");
+
+    return settle(
+        onboardings
+            .findByBureauReference(reference)
+            .orElseThrow(UnknownBureauReferenceException::new),
+        decision);
+  }
+
+  private OnboardingView settle(Onboarding onboarding, BureauDecision decision) {
+    Objects.requireNonNull(decision, "bureau decision must not be null");
 
     if (onboarding.isSettled() || !decision.isDetermined()) {
       return OnboardingView.of(onboarding);

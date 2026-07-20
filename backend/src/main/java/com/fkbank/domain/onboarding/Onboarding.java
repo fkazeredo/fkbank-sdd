@@ -30,6 +30,7 @@ public final class Onboarding {
   private final LocalDate birthDate;
   private final MonthlyIncome monthlyIncome;
   private final PasswordHash passwordHash;
+  private final BureauReference bureauReference;
 
   private OnboardingStatus status;
   private RejectionReason reason;
@@ -43,6 +44,7 @@ public final class Onboarding {
       LocalDate birthDate,
       MonthlyIncome monthlyIncome,
       PasswordHash passwordHash,
+      BureauReference bureauReference,
       OnboardingStatus status,
       RejectionReason reason,
       CustomerId customerId) {
@@ -53,6 +55,8 @@ public final class Onboarding {
     this.birthDate = Objects.requireNonNull(birthDate, "birth date must not be null");
     this.monthlyIncome = Objects.requireNonNull(monthlyIncome, "monthly income must not be null");
     this.passwordHash = Objects.requireNonNull(passwordHash, "password hash must not be null");
+    this.bureauReference =
+        Objects.requireNonNull(bureauReference, "bureau reference must not be null");
     this.status = Objects.requireNonNull(status, "status must not be null");
     this.reason = reason;
     this.customerId = customerId;
@@ -66,7 +70,8 @@ public final class Onboarding {
       Email email,
       LocalDate birthDate,
       MonthlyIncome monthlyIncome,
-      PasswordHash passwordHash) {
+      PasswordHash passwordHash,
+      BureauReference bureauReference) {
     return new Onboarding(
         id,
         fullName,
@@ -75,6 +80,7 @@ public final class Onboarding {
         birthDate,
         monthlyIncome,
         passwordHash,
+        bureauReference,
         OnboardingStatus.PENDING,
         null,
         null);
@@ -89,6 +95,7 @@ public final class Onboarding {
       LocalDate birthDate,
       MonthlyIncome monthlyIncome,
       PasswordHash passwordHash,
+      BureauReference bureauReference,
       OnboardingStatus status,
       RejectionReason reason,
       CustomerId customerId) {
@@ -100,6 +107,7 @@ public final class Onboarding {
         birthDate,
         monthlyIncome,
         passwordHash,
+        bureauReference,
         status,
         reason,
         customerId);
@@ -161,6 +169,11 @@ public final class Onboarding {
 
   public PasswordHash passwordHash() {
     return passwordHash;
+  }
+
+  /** What the bureau echoes back to name this application. Never shown to the applicant. */
+  public BureauReference bureauReference() {
+    return bureauReference;
   }
 
   public OnboardingStatus status() {

@@ -96,15 +96,25 @@ public class SignUp {
                   email,
                   birthDate,
                   monthlyIncome,
-                  passwordHasher.hash(password)));
+                  passwordHasher.hash(password),
+                  BureauReference.next()));
     } catch (OnboardingAlreadyPendingException lostTheRace) {
       // Another submission for this CPF committed between the check above and this insert. The
       // store refused the duplicate, which is exactly what was wanted; the person is shown the
       // application that won rather than an error about one that was never created.
-      return onboardings
-          .findPendingByCpf(cpf)
-          .map(SignUpResult::alreadyUnderWay)
-          .orElseThrow(() -> lostTheRace);
+      //
+      // Looked up regardless of status, not only while pending: the winner may already have been
+      // decided by the time the loser gets here, and a pending-only lookup would find nothing and
+      // turn a resubmission into a raw conflict.
+      Onboarding winner =
+          onboardings.findLatestByCpf(cpf).orElseThrow(() -> lostTheRace);
+      if (winner.isSettled()) {
+        // The winner finished while this submission was in flight. If it succeeded there is now
+        // a customer with this CPF, and the honest answer is the one a later submission would
+        // have got.
+        requireNobodyAlreadyBanksHere(cpf, email);
+      }
+      return SignUpResult.alreadyUnderWay(winner);
     }
 
     BureauDecision decision = bureau.decide(submitted);

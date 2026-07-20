@@ -15,6 +15,7 @@ import com.fkbank.testsupport.OnboardingFixture;
 import com.fkbank.testsupport.OnboardingIntegrationTest;
 import java.math.BigDecimal;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -124,5 +125,60 @@ class OnboardingOutcomeIT extends OnboardingIntegrationTest {
   void unknownApplication() {
     assertThatExceptionOfType(UnknownOnboardingException.class)
         .isThrownBy(() -> outcome.apply(OnboardingId.next(), BureauDecision.approved()));
+  }
+
+  @Nested
+  @DisplayName("the reference a callback names")
+  class TheReferenceACallbackNames {
+
+    @Test
+    @DisplayName("settles the application it belongs to")
+    void aGenuineReferenceSettlesItsApplication() {
+      Onboarding application = fixture.pendingApplication();
+
+      OnboardingView settled =
+          outcome.applyTo(application.bureauReference(), BureauDecision.approved());
+
+      assertThat(settled.status()).isEqualTo(OnboardingStatus.APPROVED);
+    }
+
+    @Test
+    @DisplayName("is not the identifier the applicant was given")
+    void theApplicantsOwnIdentifierDecidesNothing() {
+      Onboarding application = fixture.pendingApplication();
+
+      // The applicant is told their onboarding id: it comes back in the sign-up response and it
+      // is the address of the public status page. If that value could also name an application
+      // in a callback, then anyone who obtained a signing key would already hold half of what a
+      // forgery needs, and the applicant would hold the other half about themselves.
+      assertThatExceptionOfType(UnknownBureauReferenceException.class)
+          .isThrownBy(
+              () ->
+                  outcome.applyTo(
+                      BureauReference.of(application.id().value()), BureauDecision.approved()));
+
+      assertThat(onboardings.findById(application.id()))
+          .hasValueSatisfying(
+              unchanged ->
+                  assertThat(unchanged.status())
+                      .as("nothing may be decided by a reference that names no application")
+                      .isEqualTo(OnboardingStatus.PENDING));
+    }
+
+    @Test
+    @DisplayName("names one application only, so one applicant cannot decide another's")
+    void aReferenceCannotReachSomebodyElsesApplication() {
+      Onboarding mine = fixture.pendingApplication();
+      Onboarding theirs = fixture.pendingApplication();
+
+      outcome.applyTo(mine.bureauReference(), BureauDecision.approved());
+
+      assertThat(onboardings.findById(theirs.id()))
+          .hasValueSatisfying(
+              untouched ->
+                  assertThat(untouched.status())
+                      .as("settling one application must leave every other one alone")
+                      .isEqualTo(OnboardingStatus.PENDING));
+    }
   }
 }

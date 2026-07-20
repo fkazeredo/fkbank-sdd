@@ -6,6 +6,9 @@ import com.fkbank.domain.onboarding.OnboardingView;
 import com.fkbank.domain.onboarding.SignUp;
 import com.fkbank.domain.onboarding.SignUpRequest;
 import com.fkbank.domain.onboarding.SignUpResult;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -46,6 +49,23 @@ public class SignUpController {
    *     {@code 202} when it started one that is still being checked, and {@code 200} when an
    *     application was already under way and nothing was created
    */
+  @ApiResponses({
+    @ApiResponse(responseCode = "201", description = "The application was created and decided."),
+    @ApiResponse(
+        responseCode = "202",
+        description = "The application was created and is waiting on the bureau."),
+    @ApiResponse(
+        responseCode = "200",
+        description = "An application for this CPF was already under way; nothing was created."),
+    @ApiResponse(
+        responseCode = "409",
+        description = "A customer already exists with this CPF or e-mail address.",
+        content = @Content(mediaType = "application/problem+json")),
+    @ApiResponse(
+        responseCode = "422",
+        description = "The submitted values could not be accepted.",
+        content = @Content(mediaType = "application/problem+json"))
+  })
   @PostMapping(
       consumes = MediaType.APPLICATION_JSON_VALUE,
       produces = MediaType.APPLICATION_JSON_VALUE)
@@ -69,6 +89,17 @@ public class SignUpController {
    *
    * @return {@code 200} with the outcome, or {@code 404} if no such application exists
    */
+  @ApiResponses({
+    @ApiResponse(responseCode = "200", description = "Where the application got to."),
+    @ApiResponse(
+        responseCode = "404",
+        description = "No application exists with that identifier.",
+        content = @Content(mediaType = "application/problem+json")),
+    @ApiResponse(
+        responseCode = "422",
+        description = "The identifier is not a well-formed one.",
+        content = @Content(mediaType = "application/problem+json"))
+  })
   @GetMapping(value = "/{onboardingId}", produces = MediaType.APPLICATION_JSON_VALUE)
   public OnboardingResponse status(@PathVariable String onboardingId) {
     OnboardingView application = signUp.statusOf(OnboardingId.of(onboardingId));

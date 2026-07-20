@@ -2,10 +2,13 @@ package com.fkbank.application.api;
 
 import com.fkbank.domain.onboarding.BureauCallbackSignature;
 import com.fkbank.domain.onboarding.BureauDecision;
-import com.fkbank.domain.onboarding.OnboardingId;
+import com.fkbank.domain.onboarding.BureauReference;
 import com.fkbank.domain.onboarding.OnboardingOutcome;
 import com.fkbank.domain.onboarding.RejectionReason;
 import com.fkbank.domain.onboarding.UnverifiedBureauCallbackException;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 import org.springframework.http.MediaType;
@@ -54,6 +57,23 @@ public class BureauCallbackController {
    * @throws UnverifiedBureauCallbackException if the signature is absent or does not match,
    *     which the error contract renders as {@code 401} with nothing written
    */
+  @ApiResponses({
+    @ApiResponse(
+        responseCode = "200",
+        description = "The answer was applied, or had already been applied by an earlier copy."),
+    @ApiResponse(
+        responseCode = "401",
+        description = "The signature was absent or does not match; nothing was written.",
+        content = @Content(mediaType = "application/problem+json")),
+    @ApiResponse(
+        responseCode = "404",
+        description = "No application carries the reference in this callback.",
+        content = @Content(mediaType = "application/problem+json")),
+    @ApiResponse(
+        responseCode = "422",
+        description = "The callback body could not be read.",
+        content = @Content(mediaType = "application/problem+json"))
+  })
   @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<Void> receive(
       @RequestBody byte[] body,
@@ -64,7 +84,7 @@ public class BureauCallbackController {
     }
 
     Callback callback = read(body);
-    outcome.apply(OnboardingId.of(callback.reference()), decisionOf(callback));
+    outcome.applyTo(BureauReference.of(callback.reference()), decisionOf(callback));
     return ResponseEntity.ok().build();
   }
 
@@ -88,7 +108,15 @@ public class BureauCallbackController {
     };
   }
 
-  /** What the bureau sends when it answers late. */
+  /**
+   * What the bureau sends when it answers late.
+   *
+   * <p>{@code reference} is the value the bank generated for this application and gave only to
+   * the bureau. The bureau's own {@code inquiryId} is accepted and deliberately not used to
+   * decide anything: on the path where a callback exists at all, the bank timed out waiting for
+   * the response that would have carried that id, so it was never recorded and cannot be
+   * checked against.
+   */
   private record Callback(
       String inquiryId, String reference, String outcome, String reasonCategory) {}
 }

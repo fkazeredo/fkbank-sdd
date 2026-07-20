@@ -32,7 +32,8 @@ class OnboardingTest {
         Email.of("ana@example.com"),
         BIRTH_DATE,
         MonthlyIncome.of("3500.00"),
-        PasswordHash.of("{bcrypt}$2a$10$hashed"));
+        PasswordHash.of("{bcrypt}$2a$10$hashed"),
+        BureauReference.next());
   }
 
   @Nested

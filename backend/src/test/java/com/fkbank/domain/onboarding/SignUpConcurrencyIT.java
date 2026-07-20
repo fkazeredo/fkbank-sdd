@@ -1,6 +1,7 @@
 package com.fkbank.domain.onboarding;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 import com.fkbank.domain.customer.Cpf;
 import com.fkbank.domain.customer.DuplicateCustomerException;
@@ -40,8 +41,10 @@ class SignUpConcurrencyIT extends OnboardingIntegrationTest {
   private static final int ATTEMPTS = 2;
 
   @Autowired private SignUp signUp;
+  @Autowired private OnboardingOutcome outcome;
   @Autowired private ControllableBureau bureau;
   @Autowired private OnboardingRepository onboardings;
+  @Autowired private OnboardingFixture fixture;
   @Autowired private EntityManager entityManager;
 
   @BeforeEach
@@ -88,6 +91,57 @@ class SignUpConcurrencyIT extends OnboardingIntegrationTest {
     assertThat(onboardings.findPendingByCpf(Cpf.of(cpf)))
         .as("the application that won is the one the applicant is shown")
         .isPresent();
+  }
+
+  @Test
+  @DisplayName("let the loser find a winner that was decided while it was in flight")
+  void theRecoveryLookupSeesASettledWinner() {
+    // The window this closes is narrow and timing-dependent: the loser's insert is refused
+    // because the winner's application was still pending, and by the time the loser looks the
+    // winner has been decided. A lookup restricted to pending applications finds nothing there
+    // and turns an ordinary resubmission into a raw conflict, so the lookup is proven directly
+    // rather than by trying to reproduce the interleaving.
+    Onboarding winner = fixture.pendingApplication();
+    outcome.apply(winner.id(), BureauDecision.approved());
+
+    assertThat(onboardings.findPendingByCpf(winner.cpf()))
+        .as("a decided application is deliberately not pending any more")
+        .isEmpty();
+    assertThat(onboardings.findLatestByCpf(winner.cpf()))
+        .as("but the loser must still be able to find it, or it has nothing to report back")
+        .hasValueSatisfying(
+            found -> {
+              assertThat(found.id()).isEqualTo(winner.id());
+              assertThat(found.status()).isEqualTo(OnboardingStatus.APPROVED);
+            });
+  }
+
+  @Test
+  @DisplayName("answer a resubmission for an approved CPF as a duplicate, not as a conflict")
+  void aResubmissionAfterApprovalIsReportedAsADuplicate() {
+    String cpf = Cpfs.random();
+    bureau.willAnswer(BureauDecision.approved());
+    signUp.submit(
+        new SignUpRequest(
+            "Ada Lovelace",
+            cpf,
+            OnboardingFixture.uniqueEmail().value(),
+            OnboardingFixture.password(),
+            OnboardingFixture.birthDate().toString(),
+            "4500.00"));
+
+    assertThatExceptionOfType(DuplicateCustomerException.class)
+        .as("once the CPF belongs to a customer, that is what a resubmission is told")
+        .isThrownBy(
+            () ->
+                signUp.submit(
+                    new SignUpRequest(
+                        "Ada Lovelace",
+                        cpf,
+                        OnboardingFixture.uniqueEmail().value(),
+                        OnboardingFixture.password(),
+                        OnboardingFixture.birthDate().toString(),
+                        "4500.00")));
   }
 
   /** Releases both submissions at the same instant and collects what each one saw. */

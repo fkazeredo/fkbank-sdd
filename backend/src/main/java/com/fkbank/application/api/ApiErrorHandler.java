@@ -5,6 +5,7 @@ import com.fkbank.domain.customer.DuplicateCustomerException;
 import com.fkbank.domain.customer.UnderageCustomerException;
 import com.fkbank.domain.identity.WeakPasswordException;
 import com.fkbank.domain.onboarding.OnboardingAlreadyPendingException;
+import com.fkbank.domain.onboarding.UnknownBureauReferenceException;
 import com.fkbank.domain.onboarding.UnknownOnboardingException;
 import com.fkbank.domain.onboarding.UnverifiedBureauCallbackException;
 import java.net.URI;
@@ -54,7 +55,11 @@ class ApiErrorHandler {
   }
 
   /** No application or account exists behind the identifier that was asked for. */
-  @ExceptionHandler({UnknownOnboardingException.class, UnknownAccountException.class})
+  @ExceptionHandler({
+    UnknownOnboardingException.class,
+    UnknownBureauReferenceException.class,
+    UnknownAccountException.class
+  })
   ProblemDetail notFound(RuntimeException refusal) {
     return problem(HttpStatus.NOT_FOUND, codeOf(refusal), refusal.getMessage());
   }
@@ -113,6 +118,9 @@ class ApiErrorHandler {
     }
     if (refusal instanceof UnknownOnboardingException) {
       return UnknownOnboardingException.CODE;
+    }
+    if (refusal instanceof UnknownBureauReferenceException) {
+      return UnknownBureauReferenceException.CODE;
     }
     if (refusal instanceof UnknownAccountException) {
       return UnknownAccountException.CODE;

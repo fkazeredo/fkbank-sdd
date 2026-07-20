@@ -8,6 +8,7 @@ import com.fkbank.domain.customer.MonthlyIncome;
 import com.fkbank.domain.identity.PasswordHasher;
 import com.fkbank.domain.identity.RawPassword;
 import com.fkbank.domain.onboarding.BureauDecision;
+import com.fkbank.domain.onboarding.BureauReference;
 import com.fkbank.domain.onboarding.Onboarding;
 import com.fkbank.domain.onboarding.OnboardingId;
 import com.fkbank.domain.onboarding.OnboardingOutcome;
@@ -79,7 +80,8 @@ public class OnboardingFixture {
             email,
             BIRTH_DATE,
             MonthlyIncome.of("4500.00"),
-            passwordHasher.hash(RawPassword.of(PASSWORD))));
+            passwordHasher.hash(RawPassword.of(PASSWORD)),
+            BureauReference.next()));
   }
 
   public static Email uniqueEmail() {

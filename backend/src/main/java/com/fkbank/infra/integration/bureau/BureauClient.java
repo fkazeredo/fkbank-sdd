@@ -58,7 +58,10 @@ class BureauClient implements BureauCheck {
               .contentType(MediaType.APPLICATION_JSON)
               .body(
                   new InquiryRequest(
-                      onboarding.id().value().toString(),
+                      // The bank's own private correlation value, not the identifier the
+                      // applicant was given: this is what comes back in a callback, and a public
+                      // value there would be half of a forgery.
+                      onboarding.bureauReference().value().toString(),
                       onboarding.cpf().value(),
                       onboarding.fullName().value(),
                       onboarding.birthDate()))

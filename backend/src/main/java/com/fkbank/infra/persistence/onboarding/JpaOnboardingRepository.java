@@ -6,6 +6,7 @@ import com.fkbank.domain.customer.Email;
 import com.fkbank.domain.customer.FullName;
 import com.fkbank.domain.customer.MonthlyIncome;
 import com.fkbank.domain.identity.PasswordHash;
+import com.fkbank.domain.onboarding.BureauReference;
 import com.fkbank.domain.onboarding.Onboarding;
 import com.fkbank.domain.onboarding.OnboardingAlreadyPendingException;
 import com.fkbank.domain.onboarding.OnboardingId;
@@ -43,6 +44,20 @@ class JpaOnboardingRepository implements OnboardingRepository {
   }
 
   @Override
+  public Optional<Onboarding> findLatestByCpf(Cpf cpf) {
+    return onboardings
+        .findFirstByCpfOrderByUpdatedAtDesc(cpf.value())
+        .map(JpaOnboardingRepository::toDomain);
+  }
+
+  @Override
+  public Optional<Onboarding> findByBureauReference(BureauReference reference) {
+    return onboardings
+        .findByBureauReference(reference.value())
+        .map(JpaOnboardingRepository::toDomain);
+  }
+
+  @Override
   public Onboarding save(Onboarding onboarding) {
     try {
       onboardings.saveAndFlush(
@@ -54,6 +69,7 @@ class JpaOnboardingRepository implements OnboardingRepository {
               onboarding.birthDate(),
               onboarding.monthlyIncome().value(),
               onboarding.passwordHash().value(),
+              onboarding.bureauReference().value(),
               onboarding.status().name(),
               clock.instant()));
       return onboarding;
@@ -94,6 +110,7 @@ class JpaOnboardingRepository implements OnboardingRepository {
         entity.getBirthDate(),
         MonthlyIncome.of(entity.getMonthlyIncome()),
         PasswordHash.of(entity.getPasswordHash()),
+        BureauReference.of(entity.getBureauReference()),
         OnboardingStatus.valueOf(entity.getStatus()),
         reasonOf(entity.getReasonCategory()),
         customerIdOf(entity.getCustomerId()));
