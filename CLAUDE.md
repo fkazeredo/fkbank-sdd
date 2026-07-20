@@ -21,7 +21,10 @@ Development follows the **RELAY** workflow. Its authority is this file,
 `.claude/workflow-policy.yml`, `.claude/rules/`, and the invoked skill. The human-readable
 index is `docs/workflow/README.md`; it does not override executable contracts. Non-negotiable:
 
-- 1 active implementation · 0 parallel implementers · agent teams disabled · background tasks disabled.
+- Ultracode orchestration is unrestricted. At xhigh effort, Claude may create and manage dynamic
+  workflows, agent teams, subagents, parallel implementers, and background tasks in whatever
+  topology it judges most effective. Do not impose repository-level numeric limits or require
+  the operator to supervise internal orchestration.
 - RELAY is an evidence-driven state machine, not a human ceremony. `/deliver-spec`,
   `/close-sprint`, and the optional `/deliver-sprint` advance phases automatically and
   idempotently until a real terminal or external-wait state. The operator never babysits
@@ -72,10 +75,12 @@ spec delivered in one loop; after the last merge it automatically executes this 
    the agent never merges, never pushes to
    `main`/`develop`, never force-pushes, never moves or deletes a published tag, never
    approves its own PR.
-7. **Independent gates use isolated workers.** The orchestrator automatically invokes at
-   most one foreground `qa-engineer`, `pr-reviewer`, or `security-assurance-engineer` worker
-   with a bounded contract and dedicated write paths. Workers never implement production
-   code, spawn other workers, merge, or approve risk. Implementation concurrency remains one.
+7. **Ultracode autonomy, accountable results.** Claude owns its internal orchestration and may use
+   xhigh dynamic workflows, agent teams, subagents, parallel work, and background execution
+   without repository-imposed limits. It must still integrate a coherent result, preserve
+   evidence and scope, and respect role-specific write boundaries. Independent `qa-engineer`,
+   `pr-reviewer`, and `security-assurance-engineer` verdicts remain independent in
+   responsibility; orchestration mechanics must not turn them into self-approval.
 8. **Human Decision Gate.** No silent assumptions, no silent conflict resolution, no
    material decision without human visibility. Stop with a `decision-request.md`
    (`.claude/rules/human-decision-gate.md`).
@@ -125,8 +130,9 @@ short of them is ordinary delivery, not a risky action to pause on.
 
 ## Execution
 
-Top-level commands continue across internal transitions automatically. Isolated workers are
-foreground components, not operator-managed sessions. Each transition persists evidence before
+Top-level commands continue across internal transitions automatically. Ultracode owns all
+workflow, agent-team, subagent, parallel, and background orchestration without operator
+management. Each transition persists evidence before
 the next begins. If execution cannot reach a terminal or external-wait state, write `BLOCKED` + a Workflow Block Report
 (`.claude/templates/block-report.md`) and stop. Never keep trying past the limits in
 `.claude/rules/workflow-conventions.md`.

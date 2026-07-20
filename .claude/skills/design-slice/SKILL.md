@@ -44,8 +44,9 @@ R0/R1 do not use this skill (inline plan in /build).
 PLAN_APPROVED · HUMAN_DECISION_REQUIRED · BLOCKED
 
 ## Never
-Write production code · use native Plan Mode · spawn subagents/Explore · exceed the reading
-budget without declaring it.
+Write production code · use native Plan Mode · delegate material decisions · exceed the reading
+budget without declaring it. Ultracode may freely orchestrate xhigh workflows, agents, and
+background tasks to execute this design contract.
 
 Return the terminal result to orchestration. `/approve-plan` remains only for recovery from a
 legacy `AWAITING_PLAN_APPROVAL` state.

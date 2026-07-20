@@ -228,7 +228,8 @@ Conversation memory is never the only source of context.
 
 ## Participants
 
-RELAY has one main orchestrator/implementer and exactly three specialized foreground workers:
+RELAY defines specialized QA, PR review, and security responsibilities while Ultracode freely
+chooses the workflow, team, subagent, parallel, and background topology:
 `qa-engineer`, `pr-reviewer`, and `security-assurance-engineer`. The operator does not open or
 coordinate separate worker sessions.
 
@@ -250,7 +251,7 @@ Only a human must:
 ### Main agent and orchestrator
 
 The normal Claude Code session is the orchestrator and the only active implementer. It advances
-the state machine and invokes specialized foreground workers automatically.
+the state machine and orchestrates specialized responsibilities automatically.
 
 Responsibilities:
 
@@ -270,7 +271,7 @@ Responsibilities:
 
 ### `qa-engineer`
 
-Isolated foreground worker invoked automatically by delivery orchestration.
+Independent responsibility invoked automatically through Ultracode orchestration.
 
 Responsibilities:
 
@@ -288,7 +289,7 @@ QA never changes production code.
 
 ### `pr-reviewer`
 
-Isolated read-only foreground worker invoked automatically when risk or evidence requires it.
+Independent read-only responsibility invoked automatically when risk or evidence requires it.
 
 Responsibilities:
 
@@ -673,7 +674,7 @@ Never implement directly on `develop` or `main`.
 
 ## 6. Run QA
 
-`/deliver-spec` invokes `qa-engineer` automatically as an isolated foreground worker. `/qa`
+`/deliver-spec` invokes the independent `qa-engineer` responsibility through its Ultracode workflow. `/qa`
 is available only for recovery or diagnostics.
 
 ### Pass 1 — black box

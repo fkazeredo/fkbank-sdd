@@ -10,9 +10,9 @@ This directory contains the executable RELAY workflow. Its human-readable index 
   Routine operation is repeated `/deliver-spec` followed by one `/close-sprint`; that close command
   composes release preparation/finalization internally. `/deliver-sprint` is the optional whole-Sprint
   loop and includes the same closeout.
-- **agents/** — isolated foreground workers: `qa-engineer`, `pr-reviewer`, and
-  `security-assurance-engineer`. Delivery orchestration may invoke exactly these workers;
-  manual main-session use remains available for recovery. They cannot spawn workers.
+- **agents/** — independent QA, PR review, and security assurance roles. Ultracode may orchestrate
+  them and any native/dynamic workers freely; these definitions preserve responsibilities and
+  write boundaries, not topology or concurrency limits.
 - **rules/** — the guardrails skills read on demand (conventions, decision ladder, human
   decision gate, QA ownership, risk model, security gate). Not auto-imported: budgeted
   reading is the point.

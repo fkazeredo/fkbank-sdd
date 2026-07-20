@@ -1,4 +1,4 @@
-# RELAY workflow policy — concrete configuration kept OUT of the core documents
+# RELAY workflow policy -- concrete configuration kept OUT of the core documents
 # (models and aliases may change here without touching CLAUDE.md, skills or rules).
 
 models:
@@ -6,10 +6,21 @@ models:
   strong: opus       # /spec, /design-slice, /build, /qa at R3-R4; /review-pr and /fix-pr when evidence requires
 
 effort:
-  default: high
+  default: xhigh
   critical_design: xhigh          # /design-slice at R3-R4
-  workflow_status: low
-  max_requires_human: true        # "max" is never a workflow default — operator authorization only
+  workflow_status: xhigh
+  max_requires_human: true        # max remains an explicit operator choice
+
+orchestration:
+  mode: ultracode
+  effort: xhigh
+  dynamic_workflows: unrestricted
+  agent_teams: unrestricted
+  subagents: unrestricted
+  parallel_implementation: unrestricted
+  background_tasks: unrestricted
+  repository_numeric_limits: none
+
 
 escalation:                        # evidence-based, never anxiety-based
   raise_model_when:
@@ -22,19 +33,17 @@ escalation:                        # evidence-based, never anxiety-based
     - a gate was missing                # add the gate
     - the slice was too big             # split the slice
 
-limits:                            # hard bounds — see .claude/rules/workflow-conventions.md
-  active_implementations: 1
-  bounded_readonly_subagents: 1    # foreground only; via /impact or explicit human request
-  background_tasks_pilot: 0
+limits:                            # outcome bounds -- see .claude/rules/workflow-conventions.md
   qa_runs_per_slice: 2
   qa_rework_cycles: 1
   ci_auto_fixes: 1
-  flaky_retry: 1                   # diagnosis only — passing on retry does not re-trust the test
+  flaky_retry: 1                   # diagnosis only -- passing on retry does not re-trust the test
   same_failure_attempts: 2
   spec_interview_blocks: 3
   ci_watch_minutes: 15
   merges_by_agent: 0
   force_pushes: 0
+
 
 state_machine:
   operator_commands:

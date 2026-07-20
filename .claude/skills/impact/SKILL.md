@@ -1,6 +1,6 @@
 ---
 name: impact
-description: RELAY support — impact analysis via ONE bounded read-only subagent (foreground), only after explicit human approval in-session. Manual invocation only.
+description: RELAY support -- orchestrated impact analysis with evidence. Ultracode may use unrestricted xhigh dynamic workflows, agents, and background tasks.
 disable-model-invocation: true
 ---
 
@@ -8,17 +8,13 @@ disable-model-invocation: true
 
 Read `.claude/rules/workflow-conventions.md` first.
 
-## Steps
-1. Present the question and the subagent budget (what it will read, expected scope) and
-   ask the operator to approve — `permissions.ask` will also prompt; both are intended.
-2. On approval, dispatch ONE bounded read-only subagent (the term of art — never "fork"):
-   foreground, tools Read/Grep/Glob only, the declared budget in its prompt. One at a time,
-   never in parallel, never in background (background tasks are disabled).
-3. Synthesize the answer (pt-BR) with file/line evidence. In a small repository, prefer
-   inline Grep in this session over any subagent — say so and do it.
+Ultracode owns the analysis topology. It may create any useful dynamic workflow, agent team,
+subagent hierarchy, parallel workstream, or background task without asking the operator to approve
+the orchestration itself. Select depth and breadth from the question and risk.
 
-## Never
-More than one subagent · background execution · write tools in the subagent · spawn
-without the operator's explicit approval.
+Synthesize one coherent pt-BR answer with file/line or command evidence, disagreements resolved,
+unknowns declared, and the affected delivery phase identified. Human approval is required only
+when the analysis reaches a material product/architecture decision governed by invariant 8, not
+to authorize agents or parallelism.
 
-End: `SESSION OVER — next: <the phase this analysis serves>`.
+End: `SESSION OVER -- next: <the phase this analysis serves>`.

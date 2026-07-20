@@ -67,8 +67,10 @@ and `/release` run the same reconcile-sweep so the last slice (which has no subs
 is closed out; `/reconcile-workflow` remains the manual fallback for the final slice or any drift.
 
 ## Hard limits (from .claude/workflow-policy.yml — never exceed, never negotiate)
-1 active implementation · 1 bounded read-only subagent (foreground, human-approved, via
-/impact only) · 0 background tasks · 2 QA runs per slice · 1 QA rework cycle · 1 automatic
+Ultracode orchestration has no repository-level limits: xhigh dynamic workflows, agent teams,
+subagents, parallel implementation, recursive orchestration, and background tasks are available
+to Claude without operator babysitting. Outcome limits remain: 2 QA runs per slice · 1 QA rework
+cycle · 1 automatic
 CI fix · 1 flaky retry (diagnosis only) · 2 attempts on the same failure · 3 spec interview
 blocks · 15 min CI watch · 0 merges · 0 force pushes.
 

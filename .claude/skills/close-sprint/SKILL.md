@@ -21,8 +21,8 @@ not ask the operator to invoke `/release`, `/security-assurance`, or reconciliat
    updated together (never IMPLEMENTED before the merge). Then reconcile Sprint Goal, committed specs,
    IMPLEMENTED states, PRs, exact merged SHAs, CI, defects, rework and decisions.
 2. Run `verify-release` on the exact candidate SHA and preserve its output.
-3. If the candidate contains R3/R4 or policy otherwise requires assurance, invoke one
-   foreground `security-assurance-engineer` worker automatically with the exact SHA, risk
+3. If the candidate contains R3/R4 or policy otherwise requires assurance, invoke the independent
+   `security-assurance-engineer` responsibility through the Ultracode workflow with the exact SHA, risk
    inventory, approved target, control manifest, timeouts, and report path. Consume only its
    structured verdict and durable evidence. No manual session transition exists.
 4. Write a concise `docs/qa/SPRINT-<n>-CLOSURE.md` containing the durable facts needed to audit

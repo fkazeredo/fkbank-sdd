@@ -7,7 +7,7 @@ disable-model-invocation: true
 # /review-pr <number|all>
 
 Read `.claude/rules/workflow-conventions.md` first. Role: `reviewer` (writes only the report
-in `.claude/runtime/`). Run as the foreground `pr-reviewer` worker selected by orchestration.
+in `.claude/runtime/`). Run as the independent `pr-reviewer` responsibility inside the Ultracode workflow.
 
 ## Steps
 1. `gh pr view/diff` the target PR(s) — read-only.

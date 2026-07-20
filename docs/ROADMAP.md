@@ -19,7 +19,8 @@ default for every phase at R0–R2 and for `/pr`/`/release`/`/workflow-status` a
 **opus** is required for `/spec`, `/design-slice`, `/build`, `/qa` at R3–R4 (every opus
 `/design-slice` runs at `xhigh` effort, other phases default to `high`). `/spec`,
 `/design-slice`, `/build` and `/pr` all run in the SAME continuous session as
-`/deliver-spec <id>` — `/design-slice` may not spawn sub-agents (see its skill's `## Never`)
+`/deliver-spec <id>` — Ultracode may freely orchestrate xhigh dynamic workflows, agent teams,
+parallel work, and background execution under invariant 7
 and the command does not pause to let the operator switch models mid-flow. The table's
 **Model** column is therefore what to set with `/model` *before* typing `/deliver-spec <id>`
 — it is not a per-phase allocation. The one exception: the `qa-engineer` and `pr-reviewer`
@@ -148,7 +149,7 @@ propagation through an async `TaskDecorator` right on the first pass (the spec's
 sequencing note already flags `spring-modulith-starter-insight` × MockMvc as a documented
 gotcha), and 0015 must fix outbox-consumer dedup identity, redelivery and event-time
 ordering before any code is written. That is a real signal — but `/design-slice` cannot
-spawn sub-agents and shares one continuous session with `/build` inside `/deliver-spec`, so
+delegate material decisions and remains in the same top-level `/deliver-spec` operation, so
 there is no automatic way to run design on a stronger model while build stays on sonnet.
 If extra design rigor is wanted ahead of a failure (rather than waiting for the watchlist
 trigger above), the only correct mechanism is manual: run `/model opus`, invoke

@@ -7,8 +7,8 @@ disable-model-invocation: true
 # /qa <id>
 
 Read `.claude/rules/workflow-conventions.md` and `.claude/rules/qa-ownership.md` first.
-Role: `qa` (path-guard enforces QA-owned paths). Run as the foreground `qa-engineer` worker
-selected by orchestration (strong model for R3/R4 per workflow-policy.yml).
+Role: `qa` (path-guard enforces QA-owned paths). Run as the independent `qa-engineer`
+responsibility inside the Ultracode workflow (strong model for R3/R4 per workflow-policy.yml).
 
 ## Preconditions
 `state.json` = DEV_VERIFIED. Risk R2+.

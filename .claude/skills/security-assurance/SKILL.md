@@ -1,13 +1,13 @@
 ---
 name: security-assurance
-description: RELAY final-delivery gate — independent risk-based heavy security validation and durable verdict. Manual invocation only.
+description: RELAY final-delivery gate -- independent risk-based heavy security validation and durable verdict. Manual invocation only.
 disable-model-invocation: true
 ---
 
 # /security-assurance <sprint|version>
 
 Read workflow conventions, the security gate, workflow policy, and
-`docs/security/SECURITY-ASSURANCE-TRACK.md`. Role: `security`. Run in the isolated foreground
+`docs/security/SECURITY-ASSURANCE-TRACK.md`. Role: `security`. Run as an independent assurance responsibility within Ultracode orchestration
 `security-assurance-engineer` worker selected automatically by closure orchestration.
 
 ## Preconditions
@@ -47,4 +47,4 @@ missing mandatory pinned tool/profile returns `BLOCKED`; never downgrade it to a
   incomplete, or unresolved High/Critical finding.
 
 Never accept risk, alter production code, weaken tooling, test an undeclared external target,
-merge, or publish. End: `SESSION OVER — next: /close-sprint <sprint> --resume`.
+merge, or publish. End: `SESSION OVER -- next: /close-sprint <sprint> --resume`.

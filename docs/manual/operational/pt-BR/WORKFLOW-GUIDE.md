@@ -229,7 +229,7 @@ A memória de uma conversa nunca é a única fonte do contexto.
 ## Participantes
 
 O RELAY possui um agente principal orquestrador/implementador e exatamente três workers
-especializados em foreground: `qa-engineer`, `pr-reviewer` e
+especializados, orquestrados livremente pelo Ultracode: `qa-engineer`, `pr-reviewer` e
 `security-assurance-engineer`. O operador não abre nem coordena sessões separadas dos workers.
 
 ### Operador humano
@@ -250,7 +250,7 @@ Somente o humano precisa:
 ### Agente principal e orquestrador
 
 A sessão normal do Claude Code é o orquestrador e o único implementador ativo. Ela avança a
-máquina de estados e aciona automaticamente os workers especializados em foreground.
+máquina de estados e orquestra automaticamente as responsabilidades especializadas.
 
 Responsabilidades:
 
@@ -270,7 +270,7 @@ Responsabilidades:
 
 ### `qa-engineer`
 
-Worker isolado em foreground, acionado automaticamente pela orquestração.
+Responsabilidade independente acionada automaticamente pela orquestração Ultracode.
 
 Responsabilidades:
 
@@ -672,7 +672,7 @@ Nunca implemente diretamente em `develop` ou `main`.
 
 ## 6. Executar QA
 
-`/deliver-spec` aciona `qa-engineer` automaticamente como worker isolado em foreground. `/qa`
+`/deliver-spec` aciona a responsabilidade independente `qa-engineer` pelo workflow Ultracode. `/qa`
 fica disponível apenas para recuperação ou diagnóstico.
 
 ### Passagem 1 — black-box
