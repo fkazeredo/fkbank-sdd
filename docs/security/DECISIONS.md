@@ -3,4 +3,43 @@
 Durable record of security-posture decisions (human-approved). Format:
 `SEC-NNNN — YYYY-MM-DD — decision — decided by <owner>`.
 
-_No entries yet._
+## SEC-0001 — 2026-07-20 — branch protection accepted as absent for the v0.1.0 window — decided by fkazeredo
+
+Transcribed by the agent under the `security` role at the owner's instruction; the acceptance is
+the owner's, made in the `/close-sprint 1` session after being shown the finding, the options and
+a recommendation against accepting. Corresponds to finding **SEC-F-02** in
+`docs/security/reports/SPRINT-1-068d94f.md`.
+
+**Finding.** The repository has no branch protection of any kind: `gh api
+repos/fkazeredo/fkbank-sdd/rulesets` returns `[]`, and
+`.../branches/develop/protection` returns 404 "Branch not protected". `main` does not exist on
+`origin` at all; the default branch is `develop`. Independently confirmed by the
+security-assurance worker on both candidates.
+
+**Why it matters.** CLAUDE.md §Git and invariant 6 both assert that `main` and `develop` are
+"protected — PR only, enforced by GitHub rulesets", and the agent's refusal to push, merge or
+force-push is written as a complement to a server-side control. With no server-side control,
+that complement is the whole of it. Any client — an agent that misreads a rule, a script, a
+human in a hurry — can push straight to `develop`, force-push over merged history, or delete it.
+The append-only guarantee the product makes about its ledger has no equivalent guarantee about
+the history that proves the ledger was built correctly.
+
+**Exposure.** Public repository, single maintainer. No credential or customer data is at risk;
+what is at risk is the integrity and auditability of delivery history, which is the evidentiary
+basis every RELAY verdict rests on.
+
+**Decision.** Accepted for the `v0.1.0` internal pre-release window. The owner was offered the
+alternative of configuring rulesets before the release — twice, the second time after the cost
+was known to include the loss of `SECURITY_VERIFIED` — and chose acceptance both times.
+
+**Consequence carried knowingly.** An applicable mandatory control (assurance family 3,
+repository configuration) fails on the exact candidate. `SECURITY_VERIFIED` is therefore
+unavailable for this release by the track's own rule, and risk acceptance never creates it. The
+candidate can reach at most `SECURITY_OBSERVATIONS`.
+
+**Remediation.** Configure repository rulesets for `main` and `develop` — pull request required,
+no direct push, no force-push, required status checks — before the first release destined for an
+environment exposed to end users. Owner: fkazeredo. Deadline: before the first production
+release, per the production-release definition in `.claude/workflow-policy.yml`.
+
+**Affected SHA.** `068d94f` (Sprint 1 candidate) and every SHA before it.
