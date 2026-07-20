@@ -2,6 +2,8 @@ package com.fkbank.infra.observability;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.fkbank.testsupport.ControllableBureau;
+import com.fkbank.testsupport.OnboardingFixture;
 import com.fkbank.testsupport.PkceTokenFlow;
 import com.fkbank.testsupport.PostgresContainer;
 import java.net.URI;
@@ -12,7 +14,9 @@ import java.time.Duration;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -23,10 +27,13 @@ import org.springframework.test.context.DynamicPropertySource;
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("e2e")
+@Import(ControllableBureau.Configuration.class)
 @DisplayName("Actuator route security")
 class ObservabilityRouteSecurityIT {
 
   @LocalServerPort private int port;
+
+  @Autowired private OnboardingFixture onboarding;
 
   @DynamicPropertySource
   static void datasource(DynamicPropertyRegistry registry) {
@@ -54,7 +61,9 @@ class ObservabilityRouteSecurityIT {
   void prometheusExposesTheAuthorizationFailuresCounter() throws Exception {
     get("/actuator/prometheus", null); // one exercised 401 to give the counter a data point
 
-    String accessToken = new PkceTokenFlow(port).obtainAccessToken();
+    OnboardingFixture.SignedUpCustomer customer = onboarding.approvedCustomer();
+    String accessToken =
+        new PkceTokenFlow(port).obtainAccessToken(customer.username(), customer.password());
     HttpResponse<String> response = get("/actuator/prometheus", accessToken);
 
     assertThat(response.statusCode()).isEqualTo(200);

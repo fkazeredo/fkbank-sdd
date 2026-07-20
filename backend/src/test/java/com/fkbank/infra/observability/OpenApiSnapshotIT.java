@@ -40,10 +40,26 @@ class OpenApiSnapshotIT {
     PostgresContainer.registerDataSource(registry);
   }
 
+  /**
+   * Rewrites the snapshot instead of comparing against it.
+   *
+   * <p>Every slice that adds an endpoint has to regenerate this file, and without a supported way
+   * to do it the next person edits the assertion out, runs it, and puts it back — which is the
+   * same thing done in a way that can be forgotten halfway. Naming the flag makes the
+   * regeneration a deliberate, visible act: it shows up in the diff as a changed snapshot, and
+   * the gate is still what runs by default.
+   */
+  private static final boolean REGENERATE = Boolean.getBoolean("openapi.snapshot.update");
+
   @Test
   @DisplayName("/v3/api-docs is byte-for-byte identical to the committed snapshot")
   void servedDocumentMatchesSnapshot() throws Exception {
     String served = fetchApiDocs();
+
+    if (REGENERATE) {
+      Files.writeString(SNAPSHOT, served, StandardCharsets.UTF_8);
+    }
+
     String snapshot = Files.readString(SNAPSHOT, StandardCharsets.UTF_8);
 
     assertThat(served)

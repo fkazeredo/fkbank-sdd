@@ -1,0 +1,247 @@
+package com.fkbank.domain.onboarding;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+
+import com.fkbank.domain.customer.Cpf;
+import com.fkbank.domain.customer.DuplicateCustomerException;
+import com.fkbank.testsupport.ControllableBureau;
+import com.fkbank.testsupport.Cpfs;
+import com.fkbank.testsupport.OnboardingFixture;
+import com.fkbank.testsupport.OnboardingIntegrationTest;
+import jakarta.persistence.EntityManager;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+
+/**
+ * Two people submitting the same CPF at the same instant.
+ *
+ * <p>Both requests check for an existing customer, both find none, and both go on to write. The
+ * check cannot settle this — it is true when it runs and false a moment later — so what decides
+ * the outcome is a partial unique index in the database. The test exists to prove that it does,
+ * because the failure it prevents is one person holding two accounts under one tax number, and
+ * that failure is invisible until someone audits.
+ *
+ * <p>Deterministic rather than hopeful: a barrier releases both threads at the same moment
+ * instead of relying on them happening to overlap.
+ */
+@DisplayName("Two sign-ups for the same CPF at once")
+class SignUpConcurrencyIT extends OnboardingIntegrationTest {
+
+  private static final int ATTEMPTS = 2;
+
+  @Autowired private SignUp signUp;
+  @Autowired private OnboardingOutcome outcome;
+  @Autowired private ControllableBureau bureau;
+  @Autowired private OnboardingRepository onboardings;
+  @Autowired private OnboardingFixture fixture;
+  @Autowired private EntityManager entityManager;
+
+  @BeforeEach
+  void resetTheBureau() {
+    bureau.reset();
+  }
+
+  @Test
+  @DisplayName("produce exactly one customer and one account")
+  void exactlyOneOfEachSurvives() throws Exception {
+    String cpf = Cpfs.random();
+    bureau.willAnswer(BureauDecision.approved());
+
+    List<Outcome> outcomes = submitConcurrently(cpf);
+
+    assertThat(outcomes)
+        .as("both attempts must finish; a thread that died proves nothing about the rule")
+        .hasSize(ATTEMPTS);
+
+    long customersWithThisCpf = countRows("customer", cpf);
+    long accountsOpened = countAccountsFor(cpf);
+
+    assertThat(customersWithThisCpf)
+        .as("one tax number, one customer, however concurrent the submissions were")
+        .isEqualTo(1);
+    assertThat(accountsOpened)
+        .as("one customer, one account")
+        .isEqualTo(1);
+  }
+
+  @Test
+  @DisplayName("leave exactly one application behind, not two")
+  void exactlyOneApplicationSurvives() throws Exception {
+    String cpf = Cpfs.random();
+    // Nobody answers, so both attempts stay pending and the partial unique index is the only
+    // thing standing between them and two open applications for one person.
+    bureau.willAnswer(BureauDecision.undetermined());
+
+    submitConcurrently(cpf);
+
+    assertThat(countRows("onboarding", cpf))
+        .as("a second pending application for the same person must never be written")
+        .isEqualTo(1);
+    assertThat(onboardings.findPendingByCpf(Cpf.of(cpf)))
+        .as("the application that won is the one the applicant is shown")
+        .isPresent();
+  }
+
+  @Test
+  @DisplayName("let the loser find a winner that was decided while it was in flight")
+  void theRecoveryLookupSeesASettledWinner() {
+    // The window this closes is narrow and timing-dependent: the loser's insert is refused
+    // because the winner's application was still pending, and by the time the loser looks the
+    // winner has been decided. A lookup restricted to pending applications finds nothing there
+    // and turns an ordinary resubmission into a raw conflict, so the lookup is proven directly
+    // rather than by trying to reproduce the interleaving.
+    Onboarding winner = fixture.pendingApplication();
+    outcome.apply(winner.id(), BureauDecision.approved());
+
+    assertThat(onboardings.findPendingByCpf(winner.cpf()))
+        .as("a decided application is deliberately not pending any more")
+        .isEmpty();
+    assertThat(onboardings.findLatestByCpf(winner.cpf()))
+        .as("but the loser must still be able to find it, or it has nothing to report back")
+        .hasValueSatisfying(
+            found -> {
+              assertThat(found.id()).isEqualTo(winner.id());
+              assertThat(found.status()).isEqualTo(OnboardingStatus.APPROVED);
+            });
+  }
+
+  @Test
+  @DisplayName("answer a resubmission for an approved CPF as a duplicate, not as a conflict")
+  void aResubmissionAfterApprovalIsReportedAsADuplicate() {
+    String cpf = Cpfs.random();
+    bureau.willAnswer(BureauDecision.approved());
+    signUp.submit(
+        new SignUpRequest(
+            "Ada Lovelace",
+            cpf,
+            OnboardingFixture.uniqueEmail().value(),
+            OnboardingFixture.password(),
+            OnboardingFixture.birthDate().toString(),
+            "4500.00"));
+
+    assertThatExceptionOfType(DuplicateCustomerException.class)
+        .as("once the CPF belongs to a customer, that is what a resubmission is told")
+        .isThrownBy(
+            () ->
+                signUp.submit(
+                    new SignUpRequest(
+                        "Ada Lovelace",
+                        cpf,
+                        OnboardingFixture.uniqueEmail().value(),
+                        OnboardingFixture.password(),
+                        OnboardingFixture.birthDate().toString(),
+                        "4500.00")));
+  }
+
+  @Test
+  @DisplayName("refuse a second application for a CPF whose first one was already approved")
+  void anApprovedApplicationBarsASecondOne() {
+    // The race this closes is real but rare, so proving it by racing would mean a test that looks
+    // identical whether or not the fix is present. The structural claim is deterministic instead:
+    // once an application is approved, the store itself must refuse another for that CPF.
+    //
+    // Left unenforced, a submission that checked for a customer just before the winner committed
+    // inserts a second application, fails later at the customer's own unique CPF, and leaves that
+    // row behind - a pending application for someone who already banks here.
+    Onboarding approved = fixture.pendingApplication();
+    outcome.apply(approved.id(), BureauDecision.approved());
+
+    assertThatExceptionOfType(OnboardingAlreadyPendingException.class)
+        .isThrownBy(() -> fixture.pendingApplicationFor(approved.cpf(), OnboardingFixture.uniqueEmail()));
+
+    assertThat(countRows("onboarding", approved.cpf().value()))
+        .as("the refused insert must leave nothing behind")
+        .isEqualTo(1);
+  }
+
+  @Test
+  @DisplayName("still let a refused applicant apply again")
+  void aRefusedApplicationDoesNotBarRetrying() {
+    Onboarding refused = fixture.pendingApplication();
+    outcome.apply(refused.id(), BureauDecision.rejected(RejectionReason.DOCUMENT_MISMATCH));
+
+    Onboarding retry =
+        fixture.pendingApplicationFor(refused.cpf(), OnboardingFixture.uniqueEmail());
+
+    assertThat(retry.id())
+        .as("a refusal is not a life sentence; the index deliberately excludes it")
+        .isNotEqualTo(refused.id());
+    assertThat(countRows("onboarding", refused.cpf().value())).isEqualTo(2);
+  }
+
+  /** Releases both submissions at the same instant and collects what each one saw. */
+  private List<Outcome> submitConcurrently(String cpf) throws Exception {
+    CyclicBarrier startTogether = new CyclicBarrier(ATTEMPTS);
+    ExecutorService threads = Executors.newFixedThreadPool(ATTEMPTS);
+    try {
+      List<Callable<Outcome>> attempts = new ArrayList<>();
+      for (int attempt = 0; attempt < ATTEMPTS; attempt++) {
+        attempts.add(
+            () -> {
+              startTogether.await(10, TimeUnit.SECONDS);
+              try {
+                return new Outcome(
+                    signUp.submit(
+                        new SignUpRequest(
+                            "Ada Lovelace",
+                            cpf,
+                            OnboardingFixture.uniqueEmail().value(),
+                            OnboardingFixture.password(),
+                            OnboardingFixture.birthDate().toString(),
+                            "4500.00")),
+                    null);
+              } catch (DuplicateCustomerException | OnboardingException refused) {
+                // A refusal is a legitimate outcome here: whichever attempt loses is supposed
+                // to be turned away rather than to write a second row.
+                return new Outcome(null, refused);
+              }
+            });
+      }
+
+      List<Outcome> outcomes = new ArrayList<>();
+      for (Future<Outcome> finished : threads.invokeAll(attempts, 60, TimeUnit.SECONDS)) {
+        outcomes.add(finished.get());
+      }
+      return outcomes;
+    } finally {
+      threads.shutdownNow();
+    }
+  }
+
+  private long countRows(String table, String cpf) {
+    // Counted in SQL rather than through a repository: the question is how many rows exist, and
+    // a query that reads through the persistence context could be answered from a cache.
+    return ((Number)
+            entityManager
+                .createNativeQuery("SELECT count(*) FROM " + table + " WHERE cpf = :cpf")
+                .setParameter("cpf", cpf)
+                .getSingleResult())
+        .longValue();
+  }
+
+  private long countAccountsFor(String cpf) {
+    return ((Number)
+            entityManager
+                .createNativeQuery(
+                    "SELECT count(*) FROM current_account a"
+                        + " JOIN customer c ON c.id = a.customer_id"
+                        + " WHERE c.cpf = :cpf")
+                .setParameter("cpf", cpf)
+                .getSingleResult())
+        .longValue();
+  }
+
+  /** What one attempt saw: either a result, or the refusal that turned it away. */
+  private record Outcome(SignUpResult result, RuntimeException refusal) {}
+}

@@ -1,0 +1,51 @@
+<section data-testid="feature-account" class="rounded-lg border border-slate-200 bg-white p-8">
+  <h1 class="text-xl font-semibold">{{ t('account.title') }}</h1>
+
+  @if (loading()) {
+    <p data-testid="account-loading" role="status" class="mt-6 text-slate-600">
+      {{ t('account.loading') }}
+    </p>
+  } @else if (failed()) {
+    <div class="mt-6">
+      <p
+        role="alert"
+        data-testid="account-error"
+        class="rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-800"
+      >
+        {{ t('account.error') }}
+      </p>
+      <button
+        type="button"
+        data-testid="account-retry"
+        class="mt-4 rounded border border-slate-300 px-4 py-2 font-medium hover:bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-600"
+        (click)="load()"
+      >
+        {{ t('account.retry') }}
+      </button>
+    </div>
+  } @else if (account(); as summary) {
+    <p class="mt-6 text-sm text-slate-600" id="balance-label">{{ t('account.balance') }}</p>
+    <p
+      data-testid="account-balance"
+      aria-labelledby="balance-label"
+      class="mt-1 text-4xl font-semibold tracking-tight"
+    >
+      {{ summary.balance | money: summary.currency }}
+    </p>
+
+    <dl class="mt-8 flex gap-10 text-sm">
+      <div>
+        <dt class="text-slate-600">{{ t('account.branch') }}</dt>
+        <dd data-testid="account-branch" class="mt-1 font-medium tabular-nums">
+          {{ summary.branch }}
+        </dd>
+      </div>
+      <div>
+        <dt class="text-slate-600">{{ t('account.number') }}</dt>
+        <dd data-testid="account-number" class="mt-1 font-medium tabular-nums">
+          {{ summary.number }}
+        </dd>
+      </div>
+    </dl>
+  }
+</section>

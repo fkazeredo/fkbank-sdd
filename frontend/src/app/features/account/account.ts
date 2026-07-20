@@ -1,23 +1,44 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { MoneyPipe } from '../../shared/ui/money.pipe';
 import { t } from '../../shared/i18n/messages';
+import { AccountService, AccountSummary } from './account.service';
 
 /**
- * Placeholder for the Account feature.
+ * The home screen: what the person has, and where it is held.
  *
- * The walking skeleton renders the product's full navigation so the shape of the application
- * is visible from day one; the behavior arrives with this feature's own specification.
+ * The balance is rendered straight from the string the backend sent, through the money pipe.
+ * No figure on this screen is computed here.
  */
 @Component({
   selector: 'fk-account',
+  imports: [MoneyPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    <section data-testid="feature-account" class="rounded-lg border border-dashed border-slate-300 bg-white p-8">
-      <h1 class="text-xl font-semibold">{{ title }}</h1>
-      <p class="mt-2 text-slate-600">{{ description }}</p>
-    </section>
-  `,
+  templateUrl: './account.html',
 })
 export class Account {
-  readonly title = t('nav.account');
-  readonly description = t('feature.comingSoon', { feature: this.title });
+  private readonly accounts = inject(AccountService);
+
+  readonly t = t;
+  readonly account = signal<AccountSummary | null>(null);
+  readonly loading = signal(true);
+  readonly failed = signal(false);
+
+  constructor() {
+    void this.load();
+  }
+
+  async load(): Promise<void> {
+    this.loading.set(true);
+    this.failed.set(false);
+
+    try {
+      this.account.set(await this.accounts.load());
+    } catch {
+      // The reason is deliberately not shown: a person cannot act on a status code, and the
+      // retry below is the only useful response to every failure this call can produce.
+      this.failed.set(true);
+    } finally {
+      this.loading.set(false);
+    }
+  }
 }

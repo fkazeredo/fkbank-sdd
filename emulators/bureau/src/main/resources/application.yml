@@ -1,0 +1,31 @@
+spring:
+  application:
+    name: fkbank-bureau-emulator
+
+bureau:
+  # What the bureau answers for an applicant nobody has said anything about.
+  default-scenario: ${BUREAU_DEFAULT_SCENARIO:approve}
+
+  # Deliberately longer than the caller's own timeout: the slow scenarios exist to make the caller
+  # give up and then be told the outcome by callback, which is the path worth rehearsing.
+  delay: ${BUREAU_DELAY:5s}
+
+  # Configuration, never a request field. A caller able to name this address could aim signed
+  # traffic at any host this service can reach.
+  callback-url: ${BUREAU_CALLBACK_URL:http://127.0.0.1:8080/api/webhooks/bureau}
+
+  # A development-only shared secret, matching the bank's own development default so the two
+  # sides agree out of the box. It protects nothing real; every deployment that matters gives
+  # both sides a proper one. A mismatch here shows up as every callback being rejected as forged.
+  hmac-secret: ${BUREAU_HMAC_SECRET:dev-bureau-secret}
+
+  # Fixes the inquiry-id sequence, so a run that fails can be replayed with the same ids.
+  seed: ${BUREAU_SEED:20260720}
+
+server:
+  port: ${BUREAU_PORT:9101}
+  error:
+    # This service stands in for a third party. A third party does not hand out its stack traces,
+    # and a caller that started depending on one would be depending on an emulator detail.
+    include-stacktrace: never
+    include-message: never

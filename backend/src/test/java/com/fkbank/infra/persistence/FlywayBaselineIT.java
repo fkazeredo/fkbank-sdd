@@ -85,4 +85,65 @@ class FlywayBaselineIT {
 
     assertThat(tables).contains("account", "posting", "balance", "event_publication");
   }
+
+  @Test
+  @DisplayName("creates the tables that opening an account needs")
+  void createsTheOnboardingTables() throws Exception {
+    assertThat(publicTables())
+        .contains("customer", "credential", "current_account", "onboarding");
+  }
+
+  @Test
+  @DisplayName("allows only one live application per CPF, while still letting a refused one retry")
+  void enforcesOneLiveApplicationPerCpf() throws Exception {
+    record PartialIndex(String name, String definition) {}
+
+    List<PartialIndex> indexes = new ArrayList<>();
+    try (Connection connection = dataSource.getConnection();
+        Statement statement = connection.createStatement();
+        ResultSet rows =
+            statement.executeQuery(
+                "SELECT indexname, indexdef FROM pg_indexes"
+                    + " WHERE tablename = 'onboarding'")) {
+      while (rows.next()) {
+        indexes.add(new PartialIndex(rows.getString("indexname"), rows.getString("indexdef")));
+      }
+    }
+
+    assertThat(indexes)
+        .as(
+            "the index is what settles two concurrent submissions for one person; without it the"
+                + " application-level check loses the race silently")
+        .anySatisfy(
+            index -> {
+              assertThat(index.definition()).contains("UNIQUE");
+              assertThat(index.definition()).contains("cpf");
+              // An approved application has to count as live. Covering only the pending ones
+              // leaves the window a real race walks through: the winner stops being pending the
+              // instant it is approved, and a submission that checked a moment earlier is then
+              // allowed to insert a second application for a CPF that already has a customer.
+              assertThat(index.definition())
+                  .as("an approved application must bar a second one for the same CPF")
+                  .contains("'PENDING'")
+                  .contains("'APPROVED'");
+              assertThat(index.definition())
+                  .as("a refused applicant must not be barred from applying again")
+                  .doesNotContain("'REJECTED'");
+            });
+  }
+
+  private List<String> publicTables() throws Exception {
+    List<String> tables = new ArrayList<>();
+    try (Connection connection = dataSource.getConnection();
+        Statement statement = connection.createStatement();
+        ResultSet rows =
+            statement.executeQuery(
+                "SELECT table_name FROM information_schema.tables"
+                    + " WHERE table_schema = 'public'")) {
+      while (rows.next()) {
+        tables.add(rows.getString("table_name"));
+      }
+    }
+    return tables;
+  }
 }

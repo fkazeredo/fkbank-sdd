@@ -62,6 +62,20 @@ QA_RUNNING, PR_PREPARING, CI_REWORK, RELEASE_PREPARING, RELEASE_FINALIZING,
 HOTFIX_SCOPING, HOTFIX_FINALIZING. A phase must declare its finite terminal states. If one
 cannot be reached: write `BLOCKED`, produce `.claude/templates/block-report.md` filled, stop.
 
+**This is enforced, not merely written down.** `.claude/hooks/stop-guard` runs on every stop,
+reads `current-slice` and that slice's `state.json`, and refuses the stop while the status is one
+of the in-progress states — pushing the session to carry on up to three times per phase. A turn
+that simply ran out therefore resumes by itself instead of leaving the work parked.
+
+The budget is deliberately finite. When it is spent the guard stops arguing with the session and
+tells **the operator** instead, naming the slice, the state it is stuck in and the resume command.
+Two failure modes are being avoided at once: a session that quietly abandons a half-finished
+phase, and a session that loops forever because something genuinely cannot proceed. Silence is not
+one of the outcomes.
+
+What this cannot do is prevent a turn from ending — nothing inside the workflow can. What it
+guarantees is that an unfinished phase is either continued automatically or reported out loud.
+
 ## Spec state vs slice state
 Spec lifecycle lives in structured YAML frontmatter: DRAFT → AWAITING_SPEC_APPROVAL → READY →
 IN_PROGRESS → IMPLEMENTED (or SUPERSEDED / BLOCKED), carrying `owner_approved_at` (delivery
@@ -123,6 +137,53 @@ pattern. Still material and ambiguous ⇒ stop (see human-decision-gate.md).
 Every claim of success points to a command + its output, a test, a diff, an artifact or an
 observed behavior. Declare skipped checks and why. Never state "CI passed" when no required
 checks are configured — say "No required CI checks are configured."
+
+**Evidence has to discriminate.** Pointing at a command is not enough: a signal that would look
+exactly the same if the claim were false is a coincidence wearing the costume of proof. Before
+citing a signal, ask what it would show if you were wrong. If the answer is "the same thing", it
+proves nothing and must not be offered.
+
+A worked example, because this failure is easy to repeat. "A `java` process is running, so the
+build is running" is not evidence: an editor's language server is a `java` process and is there
+whether or not anything is building. "Containers for this project report an uptime of seconds" is
+evidence: nothing brings a compose stack up by accident. Both came from a real command against a
+real machine; only one of them could have come out differently.
+
+## Monitoring a background worker
+
+A phase that spawns an independent worker — QA, review, security — cannot finish until that
+worker answers. Two things must be true while it waits, and neither is optional.
+
+**Write down what you are waiting for.** When a worker is spawned, the phase writes
+`.claude/runtime/<id>/awaiting.json`, and deletes it when the worker returns:
+
+```json
+{
+  "waiting_on": "independent qa-engineer worker, run 2 of 2",
+  "since": "2026-07-20T20:05:00Z",
+  "resumes_when": "the worker returns its verdict and the harness re-invokes the session",
+  "liveness": "docker ps for this project's compose stack; writes under the worker's own paths"
+}
+```
+
+It exists so a wait is legible from outside the session: the operator, the stop guard and the next
+session can all tell an ongoing wait from an abandoned phase without interrogating the agent that
+stopped answering.
+
+**The worker's completion notification is authoritative. Nothing else is.** Do not poll for it,
+and never infer a verdict from artifacts the worker happens to have written — a report on disk is
+not a verdict until the worker says it is. Run `tools/workflow/worker-status <id>` when liveness
+is genuinely in doubt; it gathers the signals that discriminate and states plainly which ones it
+could not obtain.
+
+Two traps, both hit while delivering SPEC-0002:
+
+- **Silence is not death.** A worker running a long verification writes nothing for ten minutes or
+  more, because the build does not touch the files being watched. Timestamps go blind for exactly
+  as long as the most interesting phase lasts.
+- **A process list is not liveness.** Matching on a runtime's name finds every unrelated process
+  that shares it. Prefer a signal tied to this project — its compose stack, its own paths — over
+  one tied to a language.
 
 ## Every delivery: user-facing docs, then CI monitoring and correction
 Before opening the PR (`/pr`), update the user-facing docs the delivery touched: the user

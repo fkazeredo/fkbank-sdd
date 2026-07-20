@@ -2,19 +2,19 @@
 id: SPEC-0002
 title: Sign-up and account opening
 slug: signup-account
-status: AWAITING_SPEC_APPROVAL
+status: IN_PROGRESS
 risk: R3
 profile: critical
 modules: [onboarding, customer, identity, account]
 depends_on: [SPEC-0001]
-relevant_adrs: []
+relevant_adrs: [ADR-0002]
 reading_list:
   domain: ["Module map (onboarding, customer, identity, account)", "Cross-cutting rules"]
   architecture: ["Backend", "Security", "Emulators"]
 planned_sprint: S1
 planned_release: null
-owner_approved_at: null
-owner_approved_hash: null
+owner_approved_at: 2026-07-20T15:35:08Z
+owner_approved_hash: 3245eef9fc8e761ead5279aca5570146e78fdd17279ef2cc42c0a36991bfceb7
 ---
 
 # SPEC-0002 — Sign-up and account opening
@@ -74,6 +74,44 @@ Format: `DL-NNNN — YYYY-MM-DD — decision — decided by <owner|architecture|
   non-positive amounts (both SPEC-0001, immutable). No acceptance criterion requires a
   posting row (AC-1 requires `balance $0.00` on home). Decided by architecture (derived from
   the durable ledger schema + contract; no new decision).
+- DL-0005 — 2026-07-20 — the slice is built whole, not split. The one-session fit check flags
+  six of eight slice-too-big signals (four new bounded contexts, the first emulator service, a
+  change to the OIDC credential path, three screens, expected compaction during `/build`), and
+  the natural seam is `OnboardingApproved → AccountOpened`. Split rejected: the journey "a
+  person opens an account and logs in" delivers no customer value in halves, and the sprint
+  scoping already treats it as one delivery. Decided by owner.
+- DL-0006 — 2026-07-20 — the bureau integration is **synchronous with an asynchronous webhook
+  completion**, not synchronous only. The bureau answers inline when it can; the `delay`
+  scenario answers later through a signed callback that completes the onboarding, and
+  `duplicate-webhook` proves that callback is idempotent by onboarding id (M2's natural-key
+  form). Synchronous-only was rejected on two grounds: it makes `PENDING` a state the system
+  can never leave — BR-5 says a resubmission *returns* the pending onboarding, not that it
+  re-calls the bureau, so a person whose call timed out could never open an account — and it
+  would silently drop the `duplicate-webhook` scenario the Impact and Edge cases sections both
+  name. Decided by owner.
+- DL-0007 — 2026-07-20 — the bureau emulator is a minimal Spring Boot service in its own Maven
+  module under `emulators/bureau`, establishing the pattern the remaining five emulators
+  follow. Plain-Java HTTP and Node/Express were rejected: the first repeats hand-rolled routing
+  and JSON across six emulators, the second adds a second backend toolchain to CI and to every
+  future emulator for no capability the Java stack lacks. Recorded as ADR-0002 because it binds
+  emulators beyond this slice. Decided by owner.
+- DL-0008 — 2026-07-20 — money is presented in the `pt-BR` locale (`R$ 0,00`), while interface
+  text stays en-US. AC-1's `$0.00` is read as shorthand for a zero balance, the way `docs/DOMAIN.md`
+  writes every BRL figure with a bare `$`, not as a literal rendering requirement. Formatting BRL
+  in en-US (`R$1,234.56`) was rejected: it swaps the decimal separator and the thousands separator
+  for the reader who actually holds the account, and a balance misread by a factor of a thousand is
+  not a cosmetic defect. Rendering a bare `$0.00` was also rejected — it hides that the currency is
+  BRL, which stops being harmless as soon as PIX and boleto amounts appear. This is a documented
+  narrowing of "en-US is the only MVP locale" (`docs/ARCHITECTURE.md` §Frontend): the exception is
+  money formatting only, and it lives in the single money pipe. Decided by owner.
+- DL-0009 — 2026-07-20 — an applicant born on 29 February comes of age on **28 February** in a
+  non-leap year, not 1 March. Counting whole elapsed years (`Period.between`) would have made
+  them wait a day longer than everyone else born in February, which diverges from the civil
+  practice of treating the last day of the month as the anniversary. The window is one day every
+  four years for roughly one applicant in 1,461, but it is an eligibility rule on a money
+  product: refusing someone the law already treats as an adult is the worse of the two errors.
+  Implemented by adding the years to the birth date rather than counting the years between.
+  Decided by owner.
 - DL-0004 — 2026-07-18 — the declared monthly income (BR-1) is modelled by a `MonthlyIncome`
   value object holding a non-negative 2-decimal `BigDecimal`, **not** the ledger's `Money`: it is
   a self-reported reference figure feeding the limits engine (SPEC-0013), never a ledger balance

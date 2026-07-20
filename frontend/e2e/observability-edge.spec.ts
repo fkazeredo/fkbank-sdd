@@ -5,13 +5,64 @@ import { test, expect, type APIRequestContext } from '@playwright/test';
  * origin the whole app is published on (the same shape `compose.prod.yaml` uses), not just
  * directly against the backend container. Uses Playwright's HTTP request context rather than a
  * browser page: nothing here needs a rendered page, only the raw response the edge returns.
+ *
+ * There is no seeded credential any more - an account only exists once someone opens one - so
+ * obtaining a bearer token first opens an account through the real `POST /api/signup` route
+ * under the bureau emulator's `approve` scenario, then drives the same PKCE exchange a browser
+ * would.
  */
 
 const ORIGIN = 'http://127.0.0.1:8090';
 const CLIENT_ID = 'fkbank-spa';
 const REDIRECT_URI = `${ORIGIN}/auth/callback`;
-const USERNAME = 'e2e.user';
-const PASSWORD = 'e2e-password';
+const PASSWORD = 'Passw0rd1';
+
+function randomCpf(): string {
+  const digits: number[] = [];
+  for (let i = 0; i < 9; i += 1) {
+    digits.push(Math.floor(Math.random() * 10));
+  }
+  if (digits.every((d) => d === digits[0])) {
+    digits[0] = (digits[0] + 1) % 10;
+  }
+  const checkDigit = (upTo: number): number => {
+    let sum = 0;
+    for (let i = 0; i < upTo; i += 1) {
+      sum += digits[i] * (upTo + 1 - i);
+    }
+    const remainder = sum % 11;
+    return remainder < 2 ? 0 : 11 - remainder;
+  };
+  digits.push(checkDigit(9));
+  digits.push(checkDigit(10));
+  return digits.join('');
+}
+
+/**
+ * Opens an account through the real sign-up route and returns the e-mail address it can then
+ * sign in with. No scenario is assigned here: the bureau container's own default
+ * (`compose.e2e.yaml`, `BUREAU_DEFAULT_SCENARIO: approve`) already answers `approve` for a CPF
+ * nobody has assigned one to, so the application settles synchronously and the credential is
+ * active by the time this returns. Mutating the emulator's shared default would race every other
+ * test that also touches it, since this suite runs `fullyParallel` (`playwright.config.ts`).
+ */
+async function signUpApprovedApplicant(request: APIRequestContext): Promise<string> {
+  const username = `e2e.observability.${Date.now()}@example.com`;
+  const response = await request.post(`${ORIGIN}/api/signup`, {
+    data: {
+      fullName: 'Observability Edge Applicant',
+      cpf: randomCpf(),
+      email: username,
+      password: PASSWORD,
+      birthDate: '1990-05-15',
+      monthlyIncome: '3500.00',
+    },
+  });
+  if (response.status() !== 201) {
+    throw new Error(`sign-up did not settle as approved: ${response.status()} ${await response.text()}`);
+  }
+  return username;
+}
 
 function base64Url(bytes: Uint8Array): string {
   return Buffer.from(bytes).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
@@ -29,10 +80,10 @@ function randomBytes(length: number): Uint8Array {
 }
 
 /**
- * Drives the seeded credential through the real PKCE journey against the embedded Authorization
+ * Drives a real credential through the real PKCE journey against the embedded Authorization
  * Server, entirely through the published edge origin, and returns a bearer access token.
  */
-async function obtainAccessToken(request: APIRequestContext): Promise<string> {
+async function obtainAccessToken(request: APIRequestContext, username: string): Promise<string> {
   const verifier = base64Url(randomBytes(32));
   const challenge = base64Url(await sha256(verifier));
   const state = base64Url(randomBytes(8));
@@ -58,7 +109,7 @@ async function obtainAccessToken(request: APIRequestContext): Promise<string> {
   if (!csrfMatch) throw new Error('login page did not contain a CSRF token');
 
   const loginSubmit = await request.post(`${ORIGIN}/login`, {
-    form: { username: USERNAME, password: PASSWORD, _csrf: csrfMatch[1] },
+    form: { username, password: PASSWORD, _csrf: csrfMatch[1] },
     maxRedirects: 0,
   });
   const reauthorizeUrl = loginSubmit.headers()['location'];
@@ -98,7 +149,8 @@ test.describe('observability surface reachability through the published edge', (
   test('GET /actuator/prometheus with a valid bearer token returns Prometheus exposition text, not the SPA shell', async ({
     request,
   }) => {
-    const token = await obtainAccessToken(request);
+    const username = await signUpApprovedApplicant(request);
+    const token = await obtainAccessToken(request, username);
 
     const response = await request.get(`${ORIGIN}/actuator/prometheus`, {
       headers: { Authorization: `Bearer ${token}` },

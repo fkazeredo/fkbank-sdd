@@ -7,11 +7,12 @@ Backend: Java 21 · Spring Boot 4.1 · Spring Modulith (modular monolith, hexago
 DDD) · PostgreSQL 16 · Flyway. Frontend: Angular 22 (standalone, zoneless, signals) · PrimeNG ·
 Tailwind 4.
 
-> **Status:** the walking skeleton (SPEC-0018) is in place — OIDC/PKCE login, an authenticated
-> shell and one protected endpoint, with the architecture gates that guard everything built after
-> it. The observability baseline (SPEC-0016) is in place too — metrics, structured logs and a
-> browsable API contract from the first deploy. Product features arrive with their own
-> specifications; see `docs/ROADMAP.md`.
+> **Status:** a person can open an account and sign in. Sign-up runs a KYC check against the
+> credit-bureau emulator, opens a current account at a zero balance, and issues the credential
+> that signs them in (SPEC-0002). Underneath sit the ledger (SPEC-0001), the walking skeleton with
+> its OIDC/PKCE login and architecture gates (SPEC-0018), and the observability baseline
+> (SPEC-0016). Remaining product features arrive with their own specifications; see
+> `docs/ROADMAP.md`.
 
 ## Requirements
 
@@ -20,8 +21,8 @@ Java 21, Node 22, Docker. The Maven and npm wrappers pin everything else.
 ## Run it
 
 ```bash
-# 1. Database
-docker compose -f compose.dev.yaml up -d
+# 1. Database and the credit-bureau emulator
+docker compose -f compose.dev.yaml --profile emulators up -d
 
 # 2. Backend (http://127.0.0.1:8080)
 cd backend && ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
@@ -30,12 +31,23 @@ cd backend && ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
 cd frontend && npm ci && npm start
 ```
 
-Open the frontend and you are redirected to the login page. The development credential is
-`e2e.user` / `e2e-password` — it exists only under the `dev` and `e2e` profiles, and the `prod`
-profile refuses to start while it is still configured. Real sign-up arrives with SPEC-0002.
+There is no seeded credential any more. Open the frontend, choose **Create account**, and sign up:
+the bureau emulator approves by default, the account opens at a zero balance, and the e-mail and
+password you chose are what you sign in with.
 
-After signing in you land on the authenticated shell: the six product areas (Account, PIX, Pay,
-Boxes, Card, Credit) and the username the backend returned from `GET /api/me`.
+To exercise the other outcomes, tell the emulator what to answer before you submit:
+
+```bash
+curl -X POST http://127.0.0.1:9101/control/scenario \
+  -H 'Content-Type: application/json' \
+  -d '{"scenario":"decline","cpf":"12345678909"}'   # approve | decline | delay | duplicate-webhook
+```
+
+`delay` answers past the backend's timeout and then calls back with a signed webhook, which is how
+an application that timed out still reaches an outcome.
+
+After signing in you land on the authenticated shell: your balance, branch and account number,
+plus the six product areas (Account, PIX, Pay, Boxes, Card, Credit).
 
 ### The whole application on one origin
 
@@ -80,6 +92,10 @@ task executor. Logs are structured JSON (one object per line, exceptions in dedi
 | `GET /actuator/health` | public | liveness |
 | `GET /actuator/prometheus` | bearer token | Prometheus exposition metrics |
 | `GET /api/version` | public | the running build's own version |
+| `POST /api/signup` | public | open an account — an applicant has no credential yet |
+| `GET /api/signup/{id}` | public | where an application got to, by its unguessable id |
+| `POST /api/webhooks/bureau` | HMAC signature | the bureau's answer when it could not give one in time |
+| `GET /api/account/me` | bearer token | the caller's balance, branch and account number |
 | `GET /swagger-ui/index.html` | public | interactive API docs |
 | `GET /v3/api-docs` | public | the OpenAPI document behind the UI, drift-checked in CI |
 

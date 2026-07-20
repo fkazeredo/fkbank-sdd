@@ -1,14 +1,12 @@
 # Production. Every secret arrives from the environment; nothing sensitive is committed.
 #
-# ProductionSecretsGuard refuses to start this profile while any development default is still
-# in place, so a misconfigured boot fails before a port is ever opened rather than serving
-# traffic with a demo credential enabled. The seeded login itself cannot exist here at all:
-# SeededLoginConfig is restricted to the dev and e2e profiles.
+# ProductionSecretsGuard refuses to start this profile while any development default is still in
+# place, so a misconfigured boot fails before a port is ever opened rather than serving traffic
+# with a development secret enabled.
 fkbank:
-  security:
-    seeded-login:
-      username: ${FKBANK_LOGIN_USERNAME:}
-      password: ${FKBANK_LOGIN_PASSWORD:}
+  bureau:
+    base-url: ${FKBANK_BUREAU_BASE_URL:}
+    hmac-secret: ${FKBANK_BUREAU_HMAC_SECRET:}
 
 spring:
   security:

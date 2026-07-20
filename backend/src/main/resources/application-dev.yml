@@ -1,9 +1,11 @@
 # Local development against compose.dev.yaml (PostgreSQL on 127.0.0.1:5432).
+#
+# There is no demo credential any more: an account is opened through the sign-up flow, and the
+# credential that flow issues is the one you sign in with.
 fkbank:
-  security:
-    seeded-login:
-      username: e2e.user
-      password: e2e-password
+  bureau:
+    base-url: ${FKBANK_BUREAU_BASE_URL:http://127.0.0.1:9101}
+    hmac-secret: ${FKBANK_BUREAU_HMAC_SECRET:dev-bureau-secret}
 
 logging:
   level:
