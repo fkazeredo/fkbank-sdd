@@ -144,6 +144,42 @@ class SignUpConcurrencyIT extends OnboardingIntegrationTest {
                         "4500.00")));
   }
 
+  @Test
+  @DisplayName("refuse a second application for a CPF whose first one was already approved")
+  void anApprovedApplicationBarsASecondOne() {
+    // The race this closes is real but rare, so proving it by racing would mean a test that looks
+    // identical whether or not the fix is present. The structural claim is deterministic instead:
+    // once an application is approved, the store itself must refuse another for that CPF.
+    //
+    // Left unenforced, a submission that checked for a customer just before the winner committed
+    // inserts a second application, fails later at the customer's own unique CPF, and leaves that
+    // row behind - a pending application for someone who already banks here.
+    Onboarding approved = fixture.pendingApplication();
+    outcome.apply(approved.id(), BureauDecision.approved());
+
+    assertThatExceptionOfType(OnboardingAlreadyPendingException.class)
+        .isThrownBy(() -> fixture.pendingApplicationFor(approved.cpf(), OnboardingFixture.uniqueEmail()));
+
+    assertThat(countRows("onboarding", approved.cpf().value()))
+        .as("the refused insert must leave nothing behind")
+        .isEqualTo(1);
+  }
+
+  @Test
+  @DisplayName("still let a refused applicant apply again")
+  void aRefusedApplicationDoesNotBarRetrying() {
+    Onboarding refused = fixture.pendingApplication();
+    outcome.apply(refused.id(), BureauDecision.rejected(RejectionReason.DOCUMENT_MISMATCH));
+
+    Onboarding retry =
+        fixture.pendingApplicationFor(refused.cpf(), OnboardingFixture.uniqueEmail());
+
+    assertThat(retry.id())
+        .as("a refusal is not a life sentence; the index deliberately excludes it")
+        .isNotEqualTo(refused.id());
+    assertThat(countRows("onboarding", refused.cpf().value())).isEqualTo(2);
+  }
+
   /** Releases both submissions at the same instant and collects what each one saw. */
   private List<Outcome> submitConcurrently(String cpf) throws Exception {
     CyclicBarrier startTogether = new CyclicBarrier(ATTEMPTS);

@@ -94,8 +94,8 @@ class FlywayBaselineIT {
   }
 
   @Test
-  @DisplayName("allows only one pending application per CPF, and only while it is pending")
-  void enforcesOnePendingApplicationPerCpf() throws Exception {
+  @DisplayName("allows only one live application per CPF, while still letting a refused one retry")
+  void enforcesOneLiveApplicationPerCpf() throws Exception {
     record PartialIndex(String name, String definition) {}
 
     List<PartialIndex> indexes = new ArrayList<>();
@@ -118,9 +118,17 @@ class FlywayBaselineIT {
             index -> {
               assertThat(index.definition()).contains("UNIQUE");
               assertThat(index.definition()).contains("cpf");
+              // An approved application has to count as live. Covering only the pending ones
+              // leaves the window a real race walks through: the winner stops being pending the
+              // instant it is approved, and a submission that checked a moment earlier is then
+              // allowed to insert a second application for a CPF that already has a customer.
+              assertThat(index.definition())
+                  .as("an approved application must bar a second one for the same CPF")
+                  .contains("'PENDING'")
+                  .contains("'APPROVED'");
               assertThat(index.definition())
                   .as("a refused applicant must not be barred from applying again")
-                  .contains("WHERE (status = 'PENDING'::text)");
+                  .doesNotContain("'REJECTED'");
             });
   }
 

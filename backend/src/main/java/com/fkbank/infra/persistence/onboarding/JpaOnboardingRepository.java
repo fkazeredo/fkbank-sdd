@@ -74,11 +74,12 @@ class JpaOnboardingRepository implements OnboardingRepository {
               clock.instant()));
       return onboarding;
     } catch (DataIntegrityViolationException collision) {
-      // An application for this CPF was already waiting, or became so between the caller's
-      // check and this insert. The index that refused it is the only thing that can settle
-      // that race, and the caller answers by fetching whichever application won.
+      // A live application for this CPF already existed, or came to exist between the caller's
+      // check and this insert. The index that refused it is the only thing that can settle that
+      // race, and the caller answers by fetching whichever application won — which may by then
+      // have been approved, not merely be waiting.
       throw new OnboardingAlreadyPendingException(
-          "an application for this cpf is already pending", collision);
+          "a live application for this cpf already exists", collision);
     }
   }
 
