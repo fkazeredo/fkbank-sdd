@@ -1,0 +1,103 @@
+# Ephemeral DAST stack for the security-assurance track (family 6 "Dynamic assurance").
+# Mirrors compose.e2e.yaml's application topology so the scan runs against a release-like
+# deployment, then adds a `security-tests` service that drives an OWASP ZAP scan and exits
+# non-zero on a policy FAIL.
+#
+# Invoked by tools/security/verify-assurance.{ps1,sh}:
+#   docker compose -f compose.security.yaml up --abort-on-container-exit --exit-code-from security-tests
+#
+# Two deliberate differences from compose.e2e.yaml:
+#  1. Distinct project name — compose derives the project from the directory, so without this
+#     the security stack would reuse (and tear down) the e2e stack's containers and volumes.
+#  2. No published ports — ZAP reaches the edge over the internal network as http://edge:8090.
+#     Nothing binds a host port, so this stack can never collide with a running e2e stack.
+name: app-security
+
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: app
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d app"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  backend:
+    build:
+      context: ./backend
+    environment:
+      # The same profile the E2E stack runs: the DAST target must be the deployment shape the
+      # candidate was verified in, not a bespoke security-only configuration.
+      SPRING_PROFILES_ACTIVE: e2e
+      APP_DB_URL: jdbc:postgresql://db:5432/app
+      APP_DB_USERNAME: app
+      APP_DB_PASSWORD: app
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/api/me | grep -qE '401|200'"]
+      interval: 5s
+      timeout: 3s
+      retries: 40
+
+  edge:
+    build:
+      context: ./frontend
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8090/ || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 40
+
+  security-tests:
+    # OWASP ZAP. Pinned by tag AND digest: the assurance track requires a verdict reproducible
+    # against the exact candidate, which a floating :stable tag cannot give — the same command
+    # must scan with the same rule set months later during an audit.
+    image: ghcr.io/zaproxy/zaproxy:2.16.1@sha256:7840969c7c9fead565bf9734b12f49f6886db90b1d35b1f74d79710bbd081dab
+    depends_on:
+      edge:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    volumes:
+      # Evidence must outlive the stack: --abort-on-container-exit destroys the containers as
+      # soon as the scan finishes, so the reports are written straight onto the host. The target
+      # name follows verify-assurance's -Target so reports land beside that run's controls.txt.
+      - ./.claude/runtime/security-${APP_SECURITY_TARGET:-candidate}:/zap/wrk:rw
+      # Nested read-only mount of the scan policy, so the container cannot alter its own rules.
+      - ./tools/security/zap-baseline.conf:/zap/wrk/zap-baseline.conf:ro
+    # ZAP's image runs as uid 1000 (`zap`); root guarantees the bind-mounted report directory is
+    # writable whatever uid created it on the host, so a permission mismatch can never silently
+    # cost us the evidence. Ephemeral scanner container, no published port.
+    user: root
+    # -j runs the AJAX spider: with an SPA front end, a crawl without a real browser only ever
+    #    sees index.html and the scan is meaningless.
+    # -I stops WARN-level rules from failing the build; rules that must gate a release are
+    #    promoted to FAIL explicitly in zap-baseline.conf, so this stays honest, not lenient.
+    # Two passes, because one is not enough to be evidence:
+    #  1. baseline at the edge — the SPA's face, crawled with the AJAX spider.
+    #  2. an OpenAPI-driven API scan straight at the backend. A baseline alone tends to visit
+    #     only static URLs and never reach /api/*, /login or /oauth2/* — so its "0 failures"
+    #     attests to nothing. Seed the API scan from the contract the app publishes so the real
+    #     attack surface is actually requested.
+    # The service exits non-zero if EITHER pass fails, so no pass can hide behind the other.
+    command:
+      - sh
+      - -c
+      - |
+        zap-baseline.py -t http://edge:8090 -c zap-baseline.conf \
+          -r zap-report.html -J zap-report.json -w zap-report.md -j -m 3 -I
+        edge_status=$$?
+        zap-api-scan.py -t http://backend:8080/v3/api-docs -f openapi -c zap-baseline.conf \
+          -r zap-api-report.html -J zap-api-report.json -I
+        api_status=$$?
+        echo "zap edge pass exit=$$edge_status, api pass exit=$$api_status"
+        [ $$edge_status -eq 0 ] && [ $$api_status -eq 0 ]

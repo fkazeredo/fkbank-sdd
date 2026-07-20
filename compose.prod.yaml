@@ -1,0 +1,52 @@
+# Deploy-ready production stack. Differences from compose.e2e.yaml are deliberate:
+#  - PostgreSQL publishes NO host port; it is reachable only on the internal network.
+#  - Every credential comes from the environment with no default, so a missing secret fails the
+#    deploy loudly instead of silently starting with a well-known development value.
+#  - A real deployment fronts `edge` with a TLS-terminating proxy; TLS provisioning and image
+#    publication are release concerns, not part of this file.
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: ${APP_DB_NAME:-app}
+      POSTGRES_USER: ${APP_DB_USERNAME}
+      POSTGRES_PASSWORD: ${APP_DB_PASSWORD}
+    volumes:
+      - app-prod-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${APP_DB_USERNAME} -d ${APP_DB_NAME:-app}"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+
+  backend:
+    build:
+      context: ./backend
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      APP_DB_URL: jdbc:postgresql://db:5432/${APP_DB_NAME:-app}
+      APP_DB_USERNAME: ${APP_DB_USERNAME}
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD}
+      # Add every production secret here WITHOUT a default value, and make the prod profile
+      # fail fast when one is unset or still carries a development default. A guard like that
+      # is what stops a dev password reaching production.
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/api/me | grep -qE '401|200'"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+
+  edge:
+    build:
+      context: ./frontend
+    ports:
+      - "${APP_HTTP_BIND:-127.0.0.1:8090}:8090"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  app-prod-db:

@@ -1,0 +1,105 @@
+name: CI
+on:
+  pull_request:
+    branches: [develop, main]
+  push:
+    branches: [develop, main]
+jobs:
+  verify-slice:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: '21' }
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - name: verify-slice (mirrors tools/quality/verify-slice.sh)
+        run: |
+          chmod +x tools/quality/*.sh tools/workflow/*.sh tools/git/*.sh tools/release/*.sh
+          tools/quality/verify-slice.sh
+  e2e:
+    needs: verify-slice
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: '21' }
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - name: E2E (Playwright against the ephemeral compose.e2e stack)
+        run: |
+          chmod +x tools/quality/verify-e2e.sh
+          tools/quality/verify-e2e.sh
+  gitleaks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  workflow-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: RELAY POSIX smoke
+        run: |
+          chmod +x .claude/hooks/*.sh tools/*/*.sh
+          timeout 300 tools/tests/relay-smoke.sh
+  # SECURITY-ASSURANCE-TRACK family 3 (dependencies, licenses). Both scans run through
+  # tools/security/supply-chain/trivy-scan.sh so CI and a human debugging a finding execute
+  # the identical digest-pinned scanner; the severity policy lives in that wrapper.
+  supply-chain-deps:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: '21', cache: maven }
+      # Trivy resolves parent/BOM poms to build the real Java dependency tree. Populating the
+      # local repository first keeps that resolution offline: doing it over the network made
+      # Maven Central answer 429 Too Many Requests and abort the scan.
+      - name: Populate the Maven cache Trivy resolves against
+        run: |
+          if [ ! -f backend/mvnw ]; then echo "no backend/mvnw yet (pre-bootstrap) - skipping"; exit 0; fi
+          chmod +x backend/mvnw
+          cd backend
+          ./mvnw -B -q dependency:go-offline
+      - name: Dependency vulnerabilities (gated) and licenses (reported)
+        run: |
+          chmod +x tools/security/supply-chain/trivy-scan.sh
+          tools/security/supply-chain/trivy-scan.sh deps
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: trivy-deps-reports
+          path: target/security/supply-chain/*.json
+          if-no-files-found: warn
+  # SECURITY-ASSURANCE-TRACK family 7 (container and IaC scanning): the three Dockerfiles and
+  # the compose files as configuration, plus the runtime base images those Dockerfiles ship.
+  supply-chain-containers:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Container and IaC scan
+        # Both scans always run and their exit codes are aggregated, so one failing gate never
+        # hides the other's findings.
+        run: |
+          chmod +x tools/security/supply-chain/trivy-scan.sh
+          # `|| rc=$?` and not `; rc=$?`: GitHub runs these steps under `bash -e`, where a
+          # bare failing command aborts the step before the second scan can run.
+          config_rc=0
+          tools/security/supply-chain/trivy-scan.sh config || config_rc=$?
+          images_rc=0
+          tools/security/supply-chain/trivy-scan.sh images || images_rc=$?
+          echo "config exit=$config_rc, images exit=$images_rc"
+          [ "$config_rc" -eq 0 ] && [ "$images_rc" -eq 0 ]
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: trivy-container-iac-reports
+          path: target/security/supply-chain/*.json
+          if-no-files-found: warn

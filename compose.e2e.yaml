@@ -1,0 +1,54 @@
+# Ephemeral end-to-end stack. Publishes the whole app on a SINGLE origin
+# http://127.0.0.1:8090: an nginx edge serves the built SPA and reverse-proxies the auth/API
+# paths to the backend, so the browser sees one same-origin host and no CORS/cookie special
+# cases exist only in tests.
+#
+# `docker compose --wait` relies on the healthchecks below (see tools/quality/verify-e2e).
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: app
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d app"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  backend:
+    build:
+      context: ./backend
+    environment:
+      SPRING_PROFILES_ACTIVE: e2e
+      APP_DB_URL: jdbc:postgresql://db:5432/app
+      APP_DB_USERNAME: app
+      APP_DB_PASSWORD: app
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      # Point this at a route that proves the app is SERVING, not that it is open. A protected
+      # route answering 401 is a perfectly good liveness signal — hence `grep -qE '401|200'`
+      # and no `curl -f`, which would treat the 401 as an error.
+      test: ["CMD-SHELL", "curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/api/me | grep -qE '401|200'"]
+      interval: 5s
+      timeout: 3s
+      retries: 40
+
+  edge:
+    build:
+      context: ./frontend
+    ports:
+      - "127.0.0.1:8090:8090"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      # 127.0.0.1, never `localhost`: inside the container localhost resolves to IPv6 ::1 first,
+      # where nginx is not listening. This trap costs an hour every time it is rediscovered.
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8090/ || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 40

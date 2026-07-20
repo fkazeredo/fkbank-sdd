@@ -1,0 +1,29 @@
+version: 2
+updates:
+  - package-ecosystem: maven
+    directory: /backend
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+    labels: [dependencies, backend]
+
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+    labels: [dependencies, frontend]
+    ignore:
+      # Angular 22's @angular/build pins a tight TypeScript peer range (>=6.0 <6.1), so any
+      # TypeScript major/minor bump breaks `npm ci` with ERESOLVE (e.g. the 7.0.2 bump did).
+      # Only 6.0.x patches are compatible; TypeScript moves with the Angular toolchain, so
+      # relax this the moment @angular/build widens its supported range.
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+    labels: [dependencies, ci]

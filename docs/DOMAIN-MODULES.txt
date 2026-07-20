@@ -1,0 +1,30 @@
+# Allowed values for a spec's `modules:` frontmatter list.
+#
+# `tools/workflow/validate-specs.{sh,ps1}` reads this file and rejects any spec naming a module
+# that is not listed here — that is how a typo or an invented bounded context is caught before
+# design starts. Delete every entry below and replace them with your own bounded contexts
+# (they should match `docs/DOMAIN.md` §Module map).
+#
+# If this file is absent, the module check is skipped entirely — which is the right state for a
+# brand-new project that has not mapped its domain yet.
+#
+# One module per line. Blank lines and `#` comments are ignored.
+
+# --- The two non-domain roots (hexagonal): keep these unless your architecture differs. ---
+application
+infra
+
+# --- Domain bounded contexts. The list below is FKBANK's; replace it with yours. ---
+identity
+onboarding
+customer
+account
+ledger
+limits
+transfer
+pix
+billpay
+card
+savings
+credit
+notification

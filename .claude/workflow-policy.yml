@@ -1,0 +1,109 @@
+# RELAY workflow policy — concrete configuration kept OUT of the core documents
+# (models and aliases may change here without touching CLAUDE.md, skills or rules).
+
+models:
+  standard: sonnet   # default for every phase at R0-R2, and for /pr, /release, /workflow-status at any risk
+  strong: opus       # /spec, /design-slice, /build, /qa at R3-R4; /review-pr and /fix-pr when evidence requires
+
+effort:
+  default: high
+  critical_design: xhigh          # /design-slice at R3-R4
+  workflow_status: low
+  max_requires_human: true        # "max" is never a workflow default — operator authorization only
+
+escalation:                        # evidence-based, never anxiety-based
+  raise_model_when:
+    - context was complete AND the failure is a reasoning failure
+    - math / concurrency / declared invariant is involved
+    - the same error repeats after a context fix
+  do_not_raise_when:
+    - a file or step was skipped        # fix the instruction or the reading list
+    - the skill or spec was ambiguous   # fix the skill or the spec
+    - a gate was missing                # add the gate
+    - the slice was too big             # split the slice
+
+limits:                            # hard bounds — see .claude/rules/workflow-conventions.md
+  active_implementations: 1
+  bounded_readonly_subagents: 1    # foreground only; via /impact or explicit human request
+  background_tasks_pilot: 0
+  qa_runs_per_slice: 2
+  qa_rework_cycles: 1
+  ci_auto_fixes: 1
+  flaky_retry: 1                   # diagnosis only — passing on retry does not re-trust the test
+  same_failure_attempts: 2
+  spec_interview_blocks: 3
+  ci_watch_minutes: 15
+  merges_by_agent: 0
+  force_pushes: 0
+
+state_machine:
+  operator_commands:
+    deliver_spec: /deliver-spec
+    deliver_sprint: /deliver-sprint
+    close_sprint: /close-sprint
+  automatic_workers:
+    qa: qa-engineer
+    review: pr-reviewer
+    security: security-assurance-engineer
+  human_wait_states:
+    - HUMAN_DECISION_REQUIRED
+    - AWAITING_HUMAN_MERGE
+    - AWAITING_RISK_ACCEPTANCE
+    - AWAITING_PRODUCTION_AUTHORIZATION
+  retryable_external_states:
+    - CI_PENDING
+    - EXTERNAL_SYSTEM_UNAVAILABLE
+  terminal_failure_states:
+    - BLOCKED
+  machine_approves_derived_plan: true
+  spec_invocation_approves_exact_hash: true
+
+security_gate:                     # final-delivery assurance policy
+  track_document: docs/security/SECURITY-ASSURANCE-TRACK.md
+  track_approved: true             # owner-approved 2026-07-17; execution evidence is still mandatory
+  applicability: release containing at least one R3/R4 slice
+  r0_r2_release: SECURITY_NOT_APPLICABLE with recorded justification
+  r3_r4_internal_release: approved track executes; SECURITY_OBSERVATIONS requires recorded human decision
+  r3_r4_production_release: BLOCKED until the approved track executes with SECURITY_VERIFIED
+  note: risk acceptance NEVER produces SECURITY_VERIFIED
+  production_release_definition: >
+    A release destined for an environment exposed to end users. Every sprint release
+    before that milestone is an internal pilot/pre-release.
+
+qa_paths:                          # QA-owned write paths (bidirectional boundary; hook-enforced)
+  - "**/src/test/**/acceptance/**"
+  - "**/src/test/**/contract/**"
+  - "frontend/e2e/**"
+  - "qa/**"
+  - "docs/tests/**"
+  - "docs/qa/**"
+  - ".claude/runtime/**"
+
+releaser_paths:
+  release_prepare:
+    - "pom.xml"
+    - "**/pom.xml"
+    - "package.json"
+    - "**/package.json"
+    - "**/package-lock.json"
+    - "docs/CHANGELOG.md"
+    - "docs/release-notes/**"
+    - ".claude/runtime/**"
+  release_finalize:
+    - "pom.xml"
+    - "**/pom.xml"
+    - "package.json"
+    - "**/package.json"
+    - "**/package-lock.json"
+    - "docs/CHANGELOG.md"
+    - "docs/release-notes/**"
+    - ".claude/runtime/**"
+
+hotfix_security_minimum:
+  - static_analysis
+  - secrets
+  - dependencies
+  - authorization
+  - regression_tests
+  - human_risk_decision
+  - post_release_assurance_when_deferred
