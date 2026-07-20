@@ -2,7 +2,7 @@
 id: SPEC-0018
 title: Walking skeleton
 slug: walking-skeleton
-status: AWAITING_SPEC_APPROVAL
+status: READY
 risk: R3
 profile: critical
 modules: [identity, application, infra]
@@ -13,8 +13,8 @@ reading_list:
   architecture: ["Stack", "Style", "Backend", "Persistence", "Frontend", "Testing", "Security", "CI and deploy", "Baseline decisions"]
 planned_sprint: S1
 planned_release: null
-owner_approved_at: null
-owner_approved_hash: null
+owner_approved_at: 2026-07-20T06:19:40Z
+owner_approved_hash: 3b92f204a3cce77ee8cb897ffe46dd8dcb3e69950ab2e1359c6b0b080b38fe05
 split_review_required: true
 ---
 
@@ -204,6 +204,18 @@ Format: `DL-NNNN — YYYY-MM-DD — decision — decided by <owner|policy|archit
 - DL-0006 — 2026-07-17 — The minimal vertical exercises `domain.identity` (owner of
   credentials and authorization policy per DOMAIN §Module map); no new `platform` bounded
   context is created — decided by architecture.
+- DL-0007 — 2026-07-20 — Two earlier delivery attempts were interrupted by the operator and
+  their feature branches abandoned (commits dangling, never pushed, never merged). The
+  operator directed a clean restart from `develop`, discarding all leftover working-tree
+  state; nothing tracked was lost, since neither attempt had any tracked file outside
+  `docs/`. Delivery restarts from `develop`@`4edf424` — decided by owner.
+- DL-0008 — 2026-07-20 — Spec approved at content hash
+  `3b92f204a3cce77ee8cb897ffe46dd8dcb3e69950ab2e1359c6b0b080b38fe05` — the hash of this file
+  as presented for approval (`develop`@`4edf424`, i.e. before this approval record was
+  appended); reverify with `git show 4edf424:docs/specs/SPEC-0018-walking-skeleton.md`. The
+  content is unchanged since the Lombok/behavioral-DDD edit in `81862e4`, so the design is
+  derived under CLAUDE.md invariant 9 from the start — decided by owner via
+  `/deliver-spec 18`.
 
 ## Traceability
 
