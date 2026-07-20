@@ -97,6 +97,30 @@ After the PR opens, CI is **monitored and corrected**, never left red-and-forgot
 allowed automatic correction cycle (`/fix-pr`, or `/deliver-spec`'s one CI fix) and a re-watch.
 A PR is only mergeable with green required checks; the human merges (the agent never does).
 
+**Watch CI by event, never by fixed sleeps.** Blocking on `sleep` and re-polling wastes the
+operator's time twice over: it reacts late when a job fails early, and it re-checks a run that is
+still queued. Use the run watcher, which returns the moment the run settles:
+
+```bash
+gh run watch <run-id> --exit-status   # blocks until done; non-zero exit if any job failed
+gh pr checks <pr> --watch --fail-fast # equivalent at PR level; returns on the first failure
+```
+
+Get the run id from `gh pr checks <pr>` or `gh run list --branch <branch> --limit 1`.
+
+Polling still has its place — alongside the watcher, to report progress while a long run is in
+flight — but it must be **short and bounded**: `gh pr checks <pr>` every **20–30 seconds**, never
+the multi-minute sleeps that leave the operator staring at nothing. A job in this repository
+takes 30 s to 2 min, so a 3-minute sleep means learning about a failure minutes after it
+happened. Prefer the watcher to decide *when to act*, and short polls only to *narrate*.
+
+Two further rules that cost real time when ignored:
+- **Read the failing job's log before changing anything** (`gh run view --job <id> --log-failed`).
+  A red check whose cause was guessed burns the single correction cycle on the wrong fix.
+- **A second failure with a different cause is not a second attempt at the same failure.** The
+  "2 attempts on the same failure" limit is per failure; a genuinely new cause is a new failure,
+  but the "1 automatic CI fix" budget still binds the session — once spent, stop and ask.
+
 ## Verification scripts
 One deterministic command per level — never improvise the battery:
 `tools/quality/verify-fast` (≤5 min) · `tools/quality/verify-slice` (≤15 min) ·

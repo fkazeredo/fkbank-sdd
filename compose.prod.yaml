@@ -34,7 +34,10 @@ services:
       db:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/api/me | grep -qE '401|200'"]
+      # busybox `wget`, not `curl`: the JRE-on-Alpine runtime image ships no curl, and a 401 on
+      # a protected route is a valid "the application is serving" signal. 127.0.0.1 rather than
+      # `localhost`, which resolves to IPv6 ::1 first inside the container.
+      test: ["CMD-SHELL", "wget -q -S -O /dev/null http://127.0.0.1:8080/api/me 2>&1 | grep -qE ' (401|200) '"]
       interval: 10s
       timeout: 5s
       retries: 30

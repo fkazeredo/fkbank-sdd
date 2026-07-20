@@ -4,6 +4,14 @@ ROOT="$(cd "$(dirname "$0")/../.." && pwd)"; ART="$ROOT/.claude/runtime/e2e-arti
 if [ ! -f "$ROOT/compose.e2e.yaml" ] || [ ! -f "$ROOT/frontend/package.json" ]; then echo 'verify-e2e: planned/not-applicable (E2E stack or frontend is absent).'; exit 0; fi
 mkdir -p "$ART"
 cleanup(){ docker compose -f "$ROOT/compose.e2e.yaml" down -v >"$ART/docker-down.log" 2>&1 || true; }; trap cleanup EXIT
-timeout 300 docker compose -f "$ROOT/compose.e2e.yaml" up -d --wait >"$ART/docker-up.log" 2>&1
+# --build is not optional: `up` reuses an existing image, so without it a machine that already
+# has an image from an earlier commit verifies THAT image and reports PASS. CI never sees this
+# because it starts with an empty image store, which is what makes the failure mode expensive -
+# it only bites locally, and it looks like a green run.
+timeout 600 docker compose -f "$ROOT/compose.e2e.yaml" up -d --wait --build >"$ART/docker-up.log" 2>&1
+# Playwright ships no browser with the npm package, and a fresh CI runner has none cached, so
+# the suite fails with "Executable doesn't exist" before it ever reaches the application. The
+# install is idempotent and near-instant once the browser is present.
+( cd "$ROOT/frontend" && timeout 600 npx playwright install --with-deps chromium ) >"$ART/playwright-install.log" 2>&1
 (cd "$ROOT/frontend" && { [ -d node_modules ] || npm ci; } && timeout 900 npm run -s e2e)
 echo 'verify-e2e: PASS'

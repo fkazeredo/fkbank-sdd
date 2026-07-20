@@ -1,0 +1,12 @@
+# Ephemeral end-to-end stack (compose.e2e.yaml). The whole app is published on the single
+# IPv4 origin http://127.0.0.1:8090 through the nginx edge, so the issuer the tokens carry is
+# the origin the browser actually used (DL-0005).
+fkbank:
+  security:
+    seeded-login:
+      username: e2e.user
+      password: e2e-password
+
+logging:
+  level:
+    org.springframework.security: INFO

@@ -168,7 +168,9 @@ flowchart LR
 - Alloy;
 - gitleaks;
 - CodeQL;
-- Dependabot.
+- Trivy (dependency, container and IaC scanning).
+
+Dependabot is intentionally not used — see `docs/ARCHITECTURE.md` §Stack.
 
 Exact versions and canonical decisions belong in `docs/ARCHITECTURE.md` and ADRs.
 

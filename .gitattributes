@@ -1,0 +1,24 @@
+# Normalize text to LF in the repository. The operator works on Windows and CI runs on Linux,
+# so without this the same file hashes differently on each side and shell scripts committed
+# with CRLF fail on the runner with an unreadable "bad interpreter" error.
+* text=auto eol=lf
+
+# Windows-only scripts must keep CRLF to stay executable by cmd.exe and PowerShell.
+*.cmd text eol=crlf
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+
+# The Maven wrapper is run by /bin/sh on CI: it must be LF whatever the checkout platform.
+mvnw text eol=lf
+gradlew text eol=lf
+
+# Binaries must never be line-ending converted.
+*.jar binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.woff binary
+*.woff2 binary
