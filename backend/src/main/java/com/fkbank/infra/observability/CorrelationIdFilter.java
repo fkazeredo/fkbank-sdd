@@ -7,6 +7,8 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.UUID;
 import java.util.regex.Pattern;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -23,6 +25,7 @@ public class CorrelationIdFilter extends OncePerRequestFilter {
   static final String HEADER = "X-Correlation-Id";
   static final String MDC_KEY = "correlationId";
 
+  private static final Logger log = LoggerFactory.getLogger(CorrelationIdFilter.class);
   private static final Pattern WELL_FORMED = Pattern.compile("[A-Za-z0-9._-]{1,64}");
 
   @Override
@@ -30,11 +33,17 @@ public class CorrelationIdFilter extends OncePerRequestFilter {
       HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
       throws ServletException, IOException {
     String incoming = request.getHeader(HEADER);
-    String correlationId = isWellFormed(incoming) ? incoming : UUID.randomUUID().toString();
+    boolean trusted = isWellFormed(incoming);
+    String correlationId = trusted ? incoming : UUID.randomUUID().toString();
 
     response.setHeader(HEADER, correlationId);
     MDC.put(MDC_KEY, correlationId);
     try {
+      log.debug(
+          "{} correlationId for {} {}",
+          trusted ? "echoed" : "generated",
+          request.getMethod(),
+          request.getRequestURI());
       filterChain.doFilter(request, response);
     } finally {
       MDC.remove(MDC_KEY);

@@ -53,6 +53,18 @@ spring:
             require-authorization-consent: false
             require-proof-key: true
 
+logging:
+  structured:
+    format:
+      # One JSON object per log line, correlationId (and any other MDC entry) included as a
+      # top-level property (logging.structured.json.context.include below), exceptions in
+      # dedicated error.* fields instead of folded into the message - never a hand-rolled
+      # encoder, this is Spring Boot's own structured-logging support.
+      console: ecs
+    json:
+      context:
+        include: true
+
 management:
   endpoints:
     web:
