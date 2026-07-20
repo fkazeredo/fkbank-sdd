@@ -22,8 +22,8 @@ switch ($role) {
   'qa' { $allowed = $runtime + $qa }
   'reviewer' { $allowed = $runtime }
   'security' { $allowed = $runtime + @('docs/security/reports/*') }
-  'orchestrator' { $allowed = $runtime + @('docs/specs/*','docs/exec-plans/*','docs/qa/*','docs/CHANGELOG.md') }
-  'reconciler' { $allowed = $runtime + @('docs/specs/*','docs/exec-plans/*','docs/CHANGELOG.md') }
+  'orchestrator' { $allowed = $runtime + @('docs/specs/*','docs/exec-plans/*','docs/qa/*','docs/CHANGELOG.md','docs/ROADMAP.md') }
+  'reconciler' { $allowed = $runtime + @('docs/specs/*','docs/exec-plans/*','docs/CHANGELOG.md','docs/ROADMAP.md') }
   'releaser' {
     $manifestPath = Join-Path $runtimeRoot 'phase-manifest.json'
     if (Test-Path -LiteralPath $manifestPath) {

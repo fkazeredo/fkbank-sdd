@@ -23,8 +23,8 @@ case "$ROLE" in
   qa) ALLOWED=("${RUNTIME[@]}" "${QA[@]}");;
   reviewer) ALLOWED=("${RUNTIME[@]}");;
   security) ALLOWED=("${RUNTIME[@]}" 'docs/security/reports/*');;
-  orchestrator) ALLOWED=("${RUNTIME[@]}" 'docs/specs/*' 'docs/exec-plans/*' 'docs/qa/*' 'docs/CHANGELOG.md');;
-  reconciler) ALLOWED=("${RUNTIME[@]}" 'docs/specs/*' 'docs/exec-plans/*' 'docs/CHANGELOG.md');;
+  orchestrator) ALLOWED=("${RUNTIME[@]}" 'docs/specs/*' 'docs/exec-plans/*' 'docs/qa/*' 'docs/CHANGELOG.md' 'docs/ROADMAP.md');;
+  reconciler) ALLOWED=("${RUNTIME[@]}" 'docs/specs/*' 'docs/exec-plans/*' 'docs/CHANGELOG.md' 'docs/ROADMAP.md');;
   builder) matches "$P" "${QA[@]}" && { echo "path-guard: builder cannot edit QA-owned path: $P" >&2; exit 2; }; exit 0;;
   releaser)
     MANIFEST="$ROOT/.claude/runtime/phase-manifest.json"

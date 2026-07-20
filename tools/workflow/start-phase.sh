@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 ROLE="${1:-}"; ID="${2:-}"; PHASE="${3:-}"; RISK="${4:-}"; shift $(( $# >= 4 ? 4 : $# ))
-case "$ROLE" in specifier|designer|builder|qa|reviewer|reconciler|releaser) ;; *) echo "start-phase: invalid role '$ROLE'." >&2; exit 2;; esac
+case "$ROLE" in specifier|designer|builder|qa|reviewer|security|orchestrator|reconciler|releaser) ;; *) echo "start-phase: invalid role '$ROLE'." >&2; exit 2;; esac
 [[ "$ID" =~ ^(SPEC-(DRAFT-[0-9A-Za-z-]+|[0-9]{4})|RELEASE-[0-9A-Za-z.-]+|HOTFIX-[0-9A-Za-z.-]+)$ ]] || { echo "start-phase: invalid id '$ID'." >&2; exit 2; }
 [ -n "$PHASE" ] || { echo 'start-phase: phase is required.' >&2; exit 2; }
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"; SHA="$(git -C "$ROOT" rev-parse HEAD)"

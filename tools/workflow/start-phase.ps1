@@ -1,5 +1,5 @@
 param(
-  [Parameter(Mandatory=$true)][ValidateSet('specifier','designer','builder','qa','reviewer','reconciler','releaser')][string]$Role,
+  [Parameter(Mandatory=$true)][ValidateSet('specifier','designer','builder','qa','reviewer','security','orchestrator','reconciler','releaser')][string]$Role,
   [Parameter(Mandatory=$true)][ValidatePattern('^(SPEC-(?:DRAFT-[0-9A-Za-z-]+|\d{4})|RELEASE-[0-9A-Za-z.-]+|HOTFIX-[0-9A-Za-z.-]+)$')][string]$Id,
   [Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()][string]$Phase,
   [string]$Risk = '',
