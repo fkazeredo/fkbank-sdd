@@ -13,6 +13,7 @@ import java.util.Set;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.test.context.ActiveProfiles;
@@ -41,11 +42,15 @@ class RoutePermissionCompletenessIT {
    *
    * <p>Anything added here is a deliberate, reviewable decision to expose a route.
    */
-  private static final Set<String> PUBLIC_ALLOWLIST = Set.of();
+  private static final Set<String> PUBLIC_ALLOWLIST = Set.of("/api/version");
 
   @LocalServerPort private int port;
 
-  @Autowired private RequestMappingHandlerMapping handlerMapping;
+  // Actuator registers its own ControllerEndpointHandlerMapping alongside the regular MVC one;
+  // this test only cares about the routes FKBANK's own controllers register.
+  @Autowired
+  @Qualifier("requestMappingHandlerMapping")
+  private RequestMappingHandlerMapping handlerMapping;
 
   @DynamicPropertySource
   static void datasource(DynamicPropertyRegistry registry) {

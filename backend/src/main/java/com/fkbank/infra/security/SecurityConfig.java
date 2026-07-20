@@ -79,7 +79,7 @@ public class SecurityConfig {
     http.authorizeHttpRequests(
             requests ->
                 requests
-                    .requestMatchers(pathPattern("/actuator/health"))
+                    .requestMatchers(pathPattern("/actuator/health"), pathPattern("/api/version"))
                     .permitAll()
                     .anyRequest()
                     .authenticated())
