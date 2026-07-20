@@ -1,0 +1,44 @@
+<div class="min-h-screen bg-slate-50 text-slate-900">
+  <header class="border-b border-slate-200 bg-white">
+    <div class="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-3">
+      <span class="text-lg font-semibold tracking-tight text-violet-700">{{ t('app.name') }}</span>
+
+      <div class="flex items-center gap-3 text-sm">
+        @if (currentUser(); as user) {
+          <span data-testid="current-username" class="text-slate-600">
+            {{ t('shell.signedInAs') }} <strong class="text-slate-900">{{ user.username }}</strong>
+          </span>
+        }
+        <button
+          type="button"
+          class="rounded border border-slate-300 px-3 py-1 hover:bg-slate-100"
+          (click)="signOut()"
+        >
+          {{ t('shell.signOut') }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Keyboard navigation on the main journeys is a baseline requirement, so these stay real
+         links with visible focus rather than click handlers on styled divs. -->
+    <nav aria-label="Product" class="mx-auto max-w-5xl px-4">
+      <ul class="flex gap-1 overflow-x-auto">
+        @for (entry of navigation; track entry.path) {
+          <li>
+            <a
+              [routerLink]="entry.path"
+              routerLinkActive="border-violet-600 text-violet-700"
+              class="block border-b-2 border-transparent px-3 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-600"
+            >
+              {{ entry.label }}
+            </a>
+          </li>
+        }
+      </ul>
+    </nav>
+  </header>
+
+  <main class="mx-auto max-w-5xl px-4 py-8">
+    <router-outlet />
+  </main>
+</div>
