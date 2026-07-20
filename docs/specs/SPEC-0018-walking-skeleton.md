@@ -2,7 +2,7 @@
 id: SPEC-0018
 title: Walking skeleton
 slug: walking-skeleton
-status: READY
+status: IN_PROGRESS
 risk: R3
 profile: critical
 modules: [identity, application, infra]
