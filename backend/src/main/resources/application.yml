@@ -27,6 +27,13 @@ spring:
     # Only explicitly annotated domain.<bounded-context> packages are application modules;
     # the application and infra roots are adapters, not modules.
     detection-strategy: explicitly-annotated
+    events:
+      jdbc:
+        schema-initialization:
+          # The event publication table is created by a migration like every other table, so
+          # the outbox that will hold unprocessed business facts is reviewed as schema rather
+          # than appearing at startup.
+          enabled: false
 
   security:
     oauth2:
