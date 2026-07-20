@@ -2,7 +2,7 @@
 id: SPEC-0001
 title: Ledger core
 slug: ledger-core
-status: READY
+status: IN_PROGRESS
 risk: R3
 profile: critical
 modules: [ledger, infra]
