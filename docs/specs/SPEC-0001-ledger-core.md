@@ -2,7 +2,7 @@
 id: SPEC-0001
 title: Ledger core
 slug: ledger-core
-status: AWAITING_SPEC_APPROVAL
+status: READY
 risk: R3
 profile: critical
 modules: [ledger, infra]
@@ -13,8 +13,8 @@ reading_list:
   architecture: ["Backend", "Persistence"]
 planned_sprint: S1
 planned_release: null
-owner_approved_at: null
-owner_approved_hash: null
+owner_approved_at: 2026-07-20T11:48:05Z
+owner_approved_hash: cd29e975d28c191d6e593a6e4d8aae9705ee89e22db252010af2f8ab653a61e4
 ---
 
 # SPEC-0001 — Ledger core
@@ -83,3 +83,6 @@ Screens: none · Emulator: none
   delivery edge and arrives with the first money-moving route — decided by the domain baseline.
 - DL-0008 — The rail-agnostic `fkbank.ledger.postings` counter belongs to SPEC-0001 rather
   than SPEC-0016 — decided by the roadmap follow-through contract.
+- DL-0010 — 2026-07-20 — Delivery approved against spec content hash
+  `cd29e975d28c191d6e593a6e4d8aae9705ee89e22db252010af2f8ab653a61e4` at
+  2026-07-20T11:48:05Z by franklin.azeredo — decided by owner.
