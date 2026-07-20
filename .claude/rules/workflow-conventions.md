@@ -62,6 +62,20 @@ QA_RUNNING, PR_PREPARING, CI_REWORK, RELEASE_PREPARING, RELEASE_FINALIZING,
 HOTFIX_SCOPING, HOTFIX_FINALIZING. A phase must declare its finite terminal states. If one
 cannot be reached: write `BLOCKED`, produce `.claude/templates/block-report.md` filled, stop.
 
+**This is enforced, not merely written down.** `.claude/hooks/stop-guard` runs on every stop,
+reads `current-slice` and that slice's `state.json`, and refuses the stop while the status is one
+of the in-progress states — pushing the session to carry on up to three times per phase. A turn
+that simply ran out therefore resumes by itself instead of leaving the work parked.
+
+The budget is deliberately finite. When it is spent the guard stops arguing with the session and
+tells **the operator** instead, naming the slice, the state it is stuck in and the resume command.
+Two failure modes are being avoided at once: a session that quietly abandons a half-finished
+phase, and a session that loops forever because something genuinely cannot proceed. Silence is not
+one of the outcomes.
+
+What this cannot do is prevent a turn from ending — nothing inside the workflow can. What it
+guarantees is that an unfinished phase is either continued automatically or reported out loud.
+
 ## Spec state vs slice state
 Spec lifecycle lives in structured YAML frontmatter: DRAFT → AWAITING_SPEC_APPROVAL → READY →
 IN_PROGRESS → IMPLEMENTED (or SUPERSEDED / BLOCKED), carrying `owner_approved_at` (delivery
