@@ -20,13 +20,12 @@ import org.springframework.test.context.DynamicPropertySource;
 /**
  * Proves the migration pipeline against a real PostgreSQL 16.
  *
- * <p>Asserting on {@code flyway_schema_history} rather than on a mocked Flyway is the point:
- * this test fails if the database cannot be reached, if the baseline does not apply, or if a
- * second migration sneaks in without its own spec.
+ * <p>Asserting on {@code flyway_schema_history} rather than on a mocked Flyway is the point: this
+ * test fails if the database cannot be reached or if a migration does not apply cleanly.
  */
 @SpringBootTest
 @ActiveProfiles("dev")
-@DisplayName("Flyway baseline")
+@DisplayName("Flyway migrations")
 class FlywayBaselineIT {
 
   @Autowired private DataSource dataSource;
@@ -37,8 +36,8 @@ class FlywayBaselineIT {
   }
 
   @Test
-  @DisplayName("applies exactly one migration - the V1 baseline - and records it as successful")
-  void appliesOnlyTheBaselineMigration() throws Exception {
+  @DisplayName("applies every migration in order and records each as successful")
+  void appliesEveryMigrationSuccessfully() throws Exception {
     record AppliedMigration(String version, String description, boolean success) {}
 
     List<AppliedMigration> applied = new ArrayList<>();
@@ -58,19 +57,20 @@ class FlywayBaselineIT {
     }
 
     assertThat(applied)
-        .as("the walking skeleton owns exactly one migration; business tables arrive later,"
-            + " each with its own migration")
-        .singleElement()
-        .satisfies(
-            migration -> {
-              assertThat(migration.version()).isEqualTo("1");
-              assertThat(migration.success()).isTrue();
-            });
+        .as("a migration that failed to apply leaves the schema in a state nothing else can trust")
+        .isNotEmpty()
+        .allSatisfy(migration -> assertThat(migration.success()).isTrue());
+
+    assertThat(applied)
+        .extracting(AppliedMigration::version)
+        .as("migrations apply in version order, starting from the baseline")
+        .startsWith("1")
+        .isSorted();
   }
 
   @Test
-  @DisplayName("creates no business tables - V1 is a marker, not a schema")
-  void createsNoBusinessTables() throws Exception {
+  @DisplayName("creates the ledger tables the accounting core needs")
+  void createsTheLedgerTables() throws Exception {
     List<String> tables = new ArrayList<>();
     try (Connection connection = dataSource.getConnection();
         Statement statement = connection.createStatement();
@@ -83,8 +83,6 @@ class FlywayBaselineIT {
       }
     }
 
-    assertThat(tables)
-        .as("only Flyway's own bookkeeping table may exist at this point")
-        .containsExactly("flyway_schema_history");
+    assertThat(tables).contains("account", "posting", "balance", "event_publication");
   }
 }

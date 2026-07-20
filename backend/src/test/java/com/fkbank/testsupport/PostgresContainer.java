@@ -28,10 +28,23 @@ public final class PostgresContainer {
 
   private PostgresContainer() {}
 
+  /**
+   * How many connections one test context may hold.
+   *
+   * <p>Spring caches a separate application context per distinct test configuration, and every
+   * one of them opens its own pool against this single database. At the default pool size a
+   * dozen contexts exhaust PostgreSQL's connection limit and later test classes fail to start
+   * with "too many clients already" — a failure that points at whichever test happened to run
+   * last rather than at the cause. Small pools keep the total well inside the limit while still
+   * leaving room for the concurrency tests, which need more than one connection at a time.
+   */
+  private static final int MAX_POOL_SIZE_PER_CONTEXT = 5;
+
   /** Points the application at the container. */
   public static void registerDataSource(DynamicPropertyRegistry registry) {
     registry.add("spring.datasource.url", INSTANCE::getJdbcUrl);
     registry.add("spring.datasource.username", INSTANCE::getUsername);
     registry.add("spring.datasource.password", INSTANCE::getPassword);
+    registry.add("spring.datasource.hikari.maximum-pool-size", () -> MAX_POOL_SIZE_PER_CONTEXT);
   }
 }

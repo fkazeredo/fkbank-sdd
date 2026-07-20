@@ -288,6 +288,18 @@ Responsabilidades:
 
 O QA não altera código de produção.
 
+**A fronteira dura enquanto dura o ciclo, não para sempre.** Enquanto o QA é dono do trabalho, o
+agente principal não toca nos artefatos dele e um teste de QA incorreto volta para o QA. Quando os
+ciclos do QA se esgotam, ou o QA devolve um achado sobre o qual não vai agir, o trabalho voltou
+para o agente principal — e a partir daí ele é dono de todos os arquivos, inclusive os do QA. Ele
+os edita diretamente sob o papel `qa`, para que a auditoria do hook continue registrando quem
+escreveu o quê, em vez de deixar um defeito conhecido na árvore porque não há ninguém do outro
+lado da fronteira.
+
+O que não muda é a independência dos *veredictos*: o agente principal nunca declara o próprio
+veredicto de QA, e nenhuma orquestração pode transformar o julgamento de um worker independente em
+autoaprovação.
+
 ### `pr-reviewer`
 
 Worker isolado e read-only acionado automaticamente quando risco ou evidência exigirem.
@@ -411,6 +423,20 @@ Nova dependência de produção exige aprovação humana.
 # Human Decision Gate
 
 Nenhuma dúvida material pode ser resolvida silenciosamente.
+
+**Uma questão em aberto nunca é fechada pelo julgamento do próprio agente, por melhor que seja o
+raciocínio.** Quando a questão é genuinamente aberta, o agente para, pergunta ao owner e sempre
+apresenta uma recomendação. Apresentar opções sem recomendar nenhuma empurra o trabalho de volta
+para o owner; decidir sem perguntar tira o trabalho dele. O agente faz as duas coisas: os fatos,
+as opções com trade-offs, e a que ele escolheria, com o porquê.
+
+Perguntar substitui decidir sozinho — não substitui registrar a resposta. Toda questão respondida
+é registrada de forma durável: o Decision Log da spec, um ADR, o documento de segurança, o estado
+de release ou o manual. Uma decisão que nunca foi registrada será re-litigada; uma decisão que
+nunca foi perguntada nunca foi do agente para tomar.
+
+Aplicar uma regra que já está escrita não é decidir uma questão em aberto — é ler. As exceções
+seguem inalteradas e estão em `.claude/rules/human-decision-gate.md`.
 
 O agente deve parar quando houver:
 

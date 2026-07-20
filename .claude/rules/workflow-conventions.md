@@ -48,6 +48,15 @@ After each transition:
 4. Return a structured state/evidence result to orchestration. Only the top-level command
    prints a compact terminal summary and resume command.
 
+**Role state is per session, not global.** `tools/workflow/start-phase` writes the declared role to
+`.claude/runtime/roles/<session>` as well as to the shared `current-role`, and the path guard reads
+the session-scoped file first. A background worker and the agent that spawned it share the runtime
+directory, so whichever called `start-phase` last used to decide what *everyone* could write —
+harmless when it narrowed the caller's rights, and a hole when it widened them. The shared file is
+still written and is still the fallback, so anything without a session behaves exactly as before.
+Nothing about this changes how a phase is declared: keep calling `start-phase`, once per
+transition.
+
 In-progress states (a session must never end on these): SPECIFYING, DESIGNING, BUILDING,
 QA_RUNNING, PR_PREPARING, CI_REWORK, RELEASE_PREPARING, RELEASE_FINALIZING,
 HOTFIX_SCOPING, HOTFIX_FINALIZING. A phase must declare its finite terminal states. If one
@@ -82,6 +91,26 @@ to Claude without operator babysitting. Outcome limits remain: 2 QA runs per sli
 cycle · 1 automatic
 CI fix · 1 flaky retry (diagnosis only) · 2 attempts on the same failure · 3 spec interview
 blocks · 15 min CI watch · 0 merges · 0 force pushes.
+
+## Never decide an open question alone (owner-reinforced, 2026-07-20)
+
+An open question is never closed by the agent's own judgement, however well reasoned. When a
+question is genuinely open — a conflict, an ambiguity, a material technical or scope choice, a
+gate that cannot be met, a rule that turns out to be unexecutable — **stop and ask the owner,
+and always state a recommendation.** Presenting options without recommending one pushes the
+work back onto the owner; deciding without asking takes it away from them. Do both: the facts,
+the options with trade-offs, and the one you would pick, with why.
+
+This does not license silence in the other direction. **Keep recording decisions durably** —
+the spec's Decision log, an ADR, the security document, the release state, the manual, per
+`human-decision-gate.md` §Durable record destination. Ask first, then write the answer down
+where it outlives the session. A decision that was never recorded will be re-litigated; a
+decision that was never asked about was never the agent's to make.
+
+What still does NOT require asking is unchanged and listed in `human-decision-gate.md`
+§What does NOT require asking: a written rule, an existing unequivocal pattern, a reversible
+local choice, formatter output, and the autonomous push/PR boundary above. Applying a rule that
+is already written is not deciding an open question — it is reading.
 
 ## Questions in batch
 In `/spec` and `/design-slice`, accumulate material doubts and present ONE Human Decision

@@ -47,6 +47,16 @@ stop for material ambiguity, conflict, new architecture, public-contract change,
 migration, weakened gate, risk acceptance, irreversible action, production authorization, or a
 protected-branch merge.
 
+When it stops, it asks and recommends. An open question is never closed by the machine's own
+judgement, and options are never handed over without one of them being recommended — the first
+takes the decision away from the owner, the second hands the work back. Every answer is then
+recorded durably, per `.claude/rules/human-decision-gate.md`.
+
+Ownership of files follows the cycle, not a permanent map. While an independent worker owns its
+work the machine leaves its artifacts alone; once that worker's cycles are spent, the work has
+returned to the machine and the machine owns every file. Independence of *verdicts* is what is
+absolute: no orchestration may turn an independent judgement into self-approval.
+
 The machine never merges, force-pushes, treats missing evidence as success, or retries without
 the finite limits in `.claude/workflow-policy.yml`.
 

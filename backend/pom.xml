@@ -23,6 +23,12 @@
     <archunit.version>1.4.2</archunit.version>
     <springdoc-openapi.version>3.0.3</springdoc-openapi.version>
     <jacoco.version>0.8.15</jacoco.version>
+    <jqwik.version>1.9.2</jqwik.version>
+    <pitest.version>1.17.4</pitest.version>
+    <pitest-junit5.version>1.2.3</pitest-junit5.version>
+    <junit-platform.version>6.0.3</junit-platform.version>
+    <!-- Mutation floor for the modules that move money (docs/ARCHITECTURE.md §Testing). -->
+    <pitest.mutation.minimum>60</pitest.mutation.minimum>
     <!-- Inherited floors (docs/ARCHITECTURE.md §Testing). -->
     <jacoco.instruction.minimum>0.80</jacoco.instruction.minimum>
     <jacoco.branch.minimum>0.65</jacoco.branch.minimum>
@@ -97,6 +103,13 @@
       <groupId>org.springframework.modulith</groupId>
       <artifactId>spring-modulith-starter-core</artifactId>
     </dependency>
+    <!-- Persistent event publication registry: the outbox base. A business fact must survive a
+         restart, so publication is recorded in the same transaction as the money it announces.
+         Its table is owned by Flyway, not auto-created - see V2__ledger.sql. -->
+    <dependency>
+      <groupId>org.springframework.modulith</groupId>
+      <artifactId>spring-modulith-starter-jpa</artifactId>
+    </dependency>
 
     <dependency>
       <groupId>org.projectlombok</groupId>
@@ -149,6 +162,14 @@
       <groupId>com.tngtech.archunit</groupId>
       <artifactId>archunit-junit5</artifactId>
       <version>${archunit.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <!-- Property-based testing for the money arithmetic. Hand-picked examples prove the cases
+         someone thought of; rounding bugs live in the ones nobody did. -->
+    <dependency>
+      <groupId>net.jqwik</groupId>
+      <artifactId>jqwik</artifactId>
+      <version>${jqwik.version}</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
@@ -282,4 +303,80 @@
       </plugin>
     </plugins>
   </build>
+
+  <profiles>
+    <!-- Mutation analysis, deliberately off the default lifecycle.
+
+         Line coverage says a test executed a line; it does not say any assertion would have
+         noticed the line being wrong. On the module that owns every balance that difference is
+         the whole point, so the ledger carries a mutation floor on top of the coverage floor.
+
+         Running it costs minutes, so it is invoked on demand rather than paid for by every
+         build: `./mvnw -Pmutation verify`. -->
+    <profile>
+      <id>mutation</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.pitest</groupId>
+            <artifactId>pitest-maven</artifactId>
+            <version>${pitest.version}</version>
+            <configuration>
+              <targetClasses>
+                <param>com.fkbank.domain.ledger.*</param>
+              </targetClasses>
+              <targetTests>
+                <param>com.fkbank.domain.ledger.*</param>
+              </targetTests>
+              <!-- Mutants are hunted with the pure domain tests. The integration tests boot
+                   Spring and a database, which the analysis cannot drive per mutant. LedgerTest
+                   covers Ledger against fake ports, so excluding them leaves no class unhunted. -->
+              <excludedTestClasses>
+                <param>com.fkbank.domain.ledger.*IT</param>
+              </excludedTestClasses>
+              <mutationThreshold>${pitest.mutation.minimum}</mutationThreshold>
+              <timestampedReports>false</timestampedReports>
+            </configuration>
+            <executions>
+              <execution>
+                <id>mutation-coverage</id>
+                <phase>verify</phase>
+                <goals><goal>mutationCoverage</goal></goals>
+              </execution>
+            </executions>
+            <dependencies>
+              <dependency>
+                <groupId>org.pitest</groupId>
+                <artifactId>pitest-junit5-plugin</artifactId>
+                <version>${pitest-junit5.version}</version>
+                <exclusions>
+                  <!-- The plugin is built against JUnit Platform 1.9; Spring Boot 4.1 brings 6.x.
+                       Letting both onto the forked analysis JVM's classpath puts a 1.9 launcher
+                       beside a 6.x engine, and test discovery dies looking for a class the old
+                       launcher never had - reported only as the fork exiting abnormally. -->
+                  <exclusion>
+                    <groupId>org.junit.platform</groupId>
+                    <artifactId>junit-platform-launcher</artifactId>
+                  </exclusion>
+                  <exclusion>
+                    <groupId>org.junit.platform</groupId>
+                    <artifactId>junit-platform-engine</artifactId>
+                  </exclusion>
+                  <exclusion>
+                    <groupId>org.junit.platform</groupId>
+                    <artifactId>junit-platform-commons</artifactId>
+                  </exclusion>
+                </exclusions>
+              </dependency>
+              <dependency>
+                <groupId>org.junit.platform</groupId>
+                <artifactId>junit-platform-launcher</artifactId>
+                <version>${junit-platform.version}</version>
+              </dependency>
+            </dependencies>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 </project>
