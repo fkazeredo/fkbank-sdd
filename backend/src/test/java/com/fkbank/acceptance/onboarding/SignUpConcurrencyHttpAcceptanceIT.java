@@ -2,6 +2,7 @@ package com.fkbank.acceptance.onboarding;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.fkbank.domain.customer.Cpf;
 import com.fkbank.domain.onboarding.BureauDecision;
 import com.fkbank.domain.onboarding.Onboarding;
 import com.fkbank.domain.onboarding.OnboardingOutcome;
@@ -77,38 +78,57 @@ class SignUpConcurrencyHttpAcceptanceIT extends OnboardingHttpAcceptanceTest {
   class LoserFallback {
 
     /**
-     * {@code SignUp.submit()} answers the race for a losing thread by catching the store's
-     * refusal and calling {@code onboardings.findPendingByCpf(cpf)} to hand back the application
-     * that won ({@code SignUp.java}, the catch block right after
-     * {@code onboardings.save(Onboarding.submit(...))}). That lookup is scoped to
-     * {@code status = 'PENDING'} ({@code OnboardingJpaRepository.findByCpfAndStatus}). The
-     * migration comment on {@code onboarding_one_pending_per_cpf} promises "the loser reads the
-     * winner's row and returns it, so the person sees one application rather than an error" -
-     * with no qualification on the winner's status by the time that read happens.
+     * QA2-02 was that {@code SignUp.submit()}'s race-loss recovery looked only for a still-{@code
+     * PENDING} application ({@code findPendingByCpf}), so once the winner had already been
+     * decided - which the synchronous {@code approve}/{@code decline} bureau scenarios can
+     * complete before a genuinely raced loser gets to retry - the lookup found nothing and a
+     * resubmission surfaced as a raw {@code 409 ONBOARDING_ALREADY_PENDING} instead of the
+     * graceful answer BR-5 promises. The fix widened the recovery lookup to {@code
+     * findLatestByCpf} (any status) and re-runs the duplicate check when the winner turns out to
+     * be settled, so a late arrival for a CPF that already belongs to a customer is now told the
+     * same thing a plain resubmission would be told: {@code 409 DUPLICATE_CUSTOMER}.
      *
-     * <p>This test proves the qualification exists in the code even though the comment does not
-     * name it: the instant the winner's application is decided - which the synchronous
-     * {@code approve}/{@code decline} bureau scenarios can complete before a genuinely raced
-     * loser gets to retry - the fallback the loser depends on can no longer find it, and
-     * {@code SignUp.submit()} re-throws the original {@code OnboardingAlreadyPendingException}
-     * instead of the graceful "already under way" response BR-5 promises. The black-box HTTP race
-     * above reproduced the resulting {@code 409 ONBOARDING_ALREADY_PENDING} once in thirteen
-     * trials; this test proves the mechanism deterministically rather than relying on that timing
-     * window to recur.
+     * <p>This proves the fixed, observable contract at the real HTTP edge - controller, error
+     * mapping, response body included, not just the repository call {@code
+     * SignUpConcurrencyIT.theRecoveryLookupSeesASettledWinner} (domain-level) already proves.
+     * Forcing a genuinely concurrent loser through this exact interleaving on demand would be a
+     * flaky, timing-dependent test; the black-box adversarial pass demonstrated the real
+     * interleaving happens under true HTTP concurrency (one 5-way race in twenty-five trials
+     * produced exactly this decided-before-fallback timing, and every loser in it received {@code
+     * 409 DUPLICATE_CUSTOMER}, never the old raw conflict) - see {@code qa-report.md}, run 2. This
+     * test manufactures the "winner already decided" state directly so the contract is checked on
+     * every run rather than only when the race happens to land that way.
      */
     @Test
-    @DisplayName("the recovery lookup can no longer find an application once it has been decided")
-    void theFallbackLookupStillFindsADecidedWinner() {
-      Onboarding winner = onboardingFixture.pendingApplication();
+    @DisplayName("a CPF whose earlier application was already decided is told DUPLICATE_CUSTOMER, not the old raw conflict")
+    void aLateArrivalForAnAlreadyDecidedCpfGetsTheHonestOutcome() throws Exception {
+      Cpf cpf = Cpf.of(Cpfs.random());
+      Onboarding winner = onboardingFixture.pendingApplicationFor(cpf, OnboardingFixture.uniqueEmail());
 
       outcome.apply(winner.id(), BureauDecision.approved());
 
-      assertThat(onboardings.findPendingByCpf(winner.cpf()))
-          .as(
-              "a concurrent loser that reaches this exact lookup after the winner's synchronous"
-                  + " decision has already landed is told the application is 'already pending' -"
-                  + " even though it has, in fact, already been decided")
-          .isPresent();
+      assertThat(onboardings.findLatestByCpf(cpf))
+          .as("the recovery path a concurrent loser depends on must find the decided winner")
+          .hasValueSatisfying(found -> assertThat(found.status().name()).isEqualTo("APPROVED"));
+
+      HttpResponse<String> response =
+          post(
+              "/api/signup",
+              SignUpHttpAcceptanceIT.signUpJson(
+                  "Late Arrival",
+                  cpf.value(),
+                  OnboardingFixture.uniqueEmail().value(),
+                  "Passw0rd1",
+                  "1990-01-01",
+                  "1000.00"));
+
+      assertThat(response.statusCode())
+          .as("BR-1: once the CPF belongs to a customer, a late arrival is a duplicate, not a raw conflict")
+          .isEqualTo(409);
+      assertThat(response.body()).contains("\"code\":\"DUPLICATE_CUSTOMER\"");
+      assertThat(response.body())
+          .as("the old bug's undocumented conflict code must never surface again")
+          .doesNotContain("ONBOARDING_ALREADY_PENDING");
     }
   }
 

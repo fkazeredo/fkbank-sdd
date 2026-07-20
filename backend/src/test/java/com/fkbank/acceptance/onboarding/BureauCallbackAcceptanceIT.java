@@ -101,7 +101,12 @@ class BureauCallbackAcceptanceIT extends OnboardingHttpAcceptanceTest {
     @DisplayName("the same signed callback applied twice changes nothing the second time")
     void repeatedDeliveryIsANoOp() throws Exception {
       Onboarding pending = onboardingFixture.pendingApplication();
-      String body = callbackJson("11111111-1111-1111-1111-111111111111", pending.id().toString(), "APPROVED", null);
+      String body =
+          callbackJson(
+              "11111111-1111-1111-1111-111111111111",
+              pending.bureauReference().value().toString(),
+              "APPROVED",
+              null);
 
       HttpResponse<String> first = postSigned("/api/webhooks/bureau", body, CALLBACK_SECRET);
       HttpResponse<String> second = postSigned("/api/webhooks/bureau", body, CALLBACK_SECRET);
@@ -116,28 +121,24 @@ class BureauCallbackAcceptanceIT extends OnboardingHttpAcceptanceTest {
   }
 
   @Nested
-  @DisplayName("QA2-01 - the callback does not bind inquiryId to the onboarding it decides")
-  class InquiryBinding {
+  @DisplayName("QA2-01 - the callback's reference, not the onboarding id, names the application")
+  class ReferenceBinding {
 
     /**
-     * A correctly signed callback is accepted, and applied, as long as it names a known,
-     * still-pending {@code reference} - regardless of what {@code inquiryId} it carries. The
-     * production code parses {@code inquiryId} into {@code BureauCallbackController.Callback}
-     * and never reads it again ({@code grep -rn inquiryId backend/src/main} finds it nowhere
-     * else), and {@code OnboardingOutcome.apply(OnboardingId, BureauDecision)} has no inquiry
-     * parameter to check it against.
+     * The original QA2-01 forgery, replayed against the fix: a validly-signed callback naming the
+     * onboarding's own public id (returned to the applicant at sign-up, and the address of the
+     * public status page) as {@code reference}, with a completely fabricated {@code inquiryId}.
      *
-     * <p>This is the executable repro for the finding: anyone who can compute a valid signature
-     * (the shared secret, not any information specific to a particular application) can settle
-     * any other applicant's still-pending decision using a completely fabricated inquiry
-     * identifier, using only the onboarding id the applicant is handed back at sign-up time. The
-     * assertion below is what a bound callback would refuse; today it does not, so this test
-     * fails until the callback is validated against the inquiry actually opened for the
-     * onboarding it names.
+     * <p>This used to be accepted and applied ({@code 200}), because {@code reference} was the
+     * onboarding id and nothing checked {@code inquiryId} at all. The fix replaces the
+     * correlation value with a private, bank-generated {@code bureauReference} that is never
+     * disclosed to the applicant, so the public id no longer resolves to any application. This
+     * test is the security property the fix bought: it must keep failing to resolve, not merely
+     * happen to today.
      */
     @Test
-    @DisplayName("a signed callback with a fabricated inquiryId still overrides a pending decision")
-    void aFabricatedInquiryIdShouldNotBeAbleToDecideSomeoneElsesApplication() throws Exception {
+    @DisplayName("the public onboarding id is refused as a reference, even when correctly signed")
+    void thePublicOnboardingIdIsRefusedAsAReference() throws Exception {
       Onboarding pending = onboardingFixture.pendingApplication();
       String fabricatedInquiryId = "ffffffff-ffff-ffff-ffff-ffffffffffff";
       String body =
@@ -146,14 +147,39 @@ class BureauCallbackAcceptanceIT extends OnboardingHttpAcceptanceTest {
       HttpResponse<String> response = postSigned("/api/webhooks/bureau", body, CALLBACK_SECRET);
 
       assertThat(response.statusCode())
-          .as(
-              "a callback is authenticated by more than a shared secret and a known reference: it"
-                  + " must also carry the inquiryId the application was actually opened under, or a"
-                  + " fabricated one should be refused rather than silently accepted")
-          .isNotEqualTo(200);
+          .as("the applicant's own public identifier must never double as the callback's reference")
+          .isEqualTo(404);
+      assertThat(response.body()).contains("\"code\":\"UNKNOWN_ONBOARDING\"");
       assertThat(onboardings.findById(pending.id()))
-          .as("the application must still be waiting on its real inquiry, not settled by a fabricated one")
+          .as("a callback that resolves to no application must leave the real one untouched")
           .hasValueSatisfying(o -> assertThat(o.isPending()).isTrue());
+    }
+
+    /**
+     * Documents the design's other half, so a future change cannot silently narrow it without a
+     * test noticing: the bureau's own {@code inquiryId} is accepted but never checked, by design,
+     * because on the one path a callback exists at all (the bureau timed out), the bank never saw
+     * the response that would have carried it. What authenticates a callback is the signature
+     * plus a reference the bank itself generated and disclosed only to the bureau - not the
+     * inquiry id.
+     */
+    @Test
+    @DisplayName("the genuine reference is accepted with any inquiryId - the reference is what authenticates the correlation")
+    void theGenuineReferenceIsAcceptedRegardlessOfInquiryId() throws Exception {
+      Onboarding pending = onboardingFixture.pendingApplication();
+      String fabricatedInquiryId = "ffffffff-ffff-ffff-ffff-ffffffffffff";
+      String body =
+          callbackJson(
+              fabricatedInquiryId,
+              pending.bureauReference().value().toString(),
+              "REJECTED",
+              "FRAUD_SUSPECTED");
+
+      HttpResponse<String> response = postSigned("/api/webhooks/bureau", body, CALLBACK_SECRET);
+
+      assertThat(response.statusCode()).isEqualTo(200);
+      assertThat(onboardings.findById(pending.id()))
+          .hasValueSatisfying(o -> assertThat(o.status().name()).isEqualTo("REJECTED"));
     }
   }
 
