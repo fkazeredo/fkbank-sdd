@@ -141,4 +141,15 @@ Format: `DL-NNNN — YYYY-MM-DD — decision — decided by <owner|architecture|
 
 ## Traceability
 
-Fill when implementing: the tests covering each OR (class#method / E2E file).
+| Rule | Tests |
+|---|---|
+| OR-1 (correlationId per request, async propagation) | `CorrelationIdFilterTest` (8 cases) · `MdcTaskDecoratorTest` (3 cases) · `AsyncCorrelationPropagationIT` |
+| OR-2 (`/actuator/prometheus`, authorization failures counter) | `ObservabilityRouteSecurityIT` (3 cases) |
+| OR-3 (structured JSON logs) | `StructuredLoggingIT` (2 cases) |
+| OR-4 (OpenAPI UI + drift gate) | `OpenApiAccessibilityIT` (2 cases) · `OpenApiSnapshotIT` |
+| `/api/version` public | `VersionEndpointIT` |
+| Security allowlist completeness | `RoutePermissionCompletenessIT` (updated) |
+
+All under `backend/src/test/java/com/fkbank/infra/observability/` unless noted otherwise
+(`VersionEndpointIT` in `application/api`, `RoutePermissionCompletenessIT` in `infra/security`).
+No E2E/Playwright file — this slice has no frontend surface.

@@ -9,7 +9,9 @@ Tailwind 4.
 
 > **Status:** the walking skeleton (SPEC-0018) is in place — OIDC/PKCE login, an authenticated
 > shell and one protected endpoint, with the architecture gates that guard everything built after
-> it. Product features arrive with their own specifications; see `docs/ROADMAP.md`.
+> it. The observability baseline (SPEC-0016) is in place too — metrics, structured logs and a
+> browsable API contract from the first deploy. Product features arrive with their own
+> specifications; see `docs/ROADMAP.md`.
 
 ## Requirements
 
@@ -66,6 +68,20 @@ degrading into a silent skip.
 
 Dependency updates are deliberately not automated (see `docs/ARCHITECTURE.md` §Stack);
 vulnerabilities are still gated in CI by the Trivy supply-chain scan.
+
+## Observability
+
+Every request carries a correlation id (`X-Correlation-Id`, generated if none is sent, echoed
+back either way) into every log line it produces, including one dispatched onto the app's async
+task executor. Logs are structured JSON (one object per line, exceptions in dedicated fields).
+
+| Endpoint | Auth | What |
+|---|---|---|
+| `GET /actuator/health` | public | liveness |
+| `GET /actuator/prometheus` | bearer token | Prometheus exposition metrics |
+| `GET /api/version` | public | the running build's own version |
+| `GET /swagger-ui/index.html` | public | interactive API docs |
+| `GET /v3/api-docs` | public | the OpenAPI document behind the UI, drift-checked in CI |
 
 ## Architecture in one paragraph
 
