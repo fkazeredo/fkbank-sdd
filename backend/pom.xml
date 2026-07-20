@@ -328,7 +328,14 @@
                 <param>com.fkbank.domain.ledger.*</param>
               </targetTests>
               <!-- Mutants are hunted with the pure domain tests. The integration tests boot
-                   Spring and a database, which the analysis cannot drive per mutant. -->
+                   Spring and a database, which the analysis cannot drive per mutant.
+
+                   KNOWN GAP - this exclusion currently hollows out the floor it protects. Ledger
+                   itself is exercised only by those integration tests, so excluding them leaves
+                   the one class the mutation floor exists for with no test to kill a mutant.
+                   Closing it needs unit tests for Ledger against fake ports, which is what the
+                   value objects already have and Ledger does not. Recorded rather than hidden by
+                   narrowing targetClasses to match what the tests happen to reach. -->
               <excludedTestClasses>
                 <param>com.fkbank.domain.ledger.*IT</param>
               </excludedTestClasses>

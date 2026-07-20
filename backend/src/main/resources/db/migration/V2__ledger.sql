@@ -60,6 +60,29 @@ CREATE UNIQUE INDEX posting_reverses_at_most_once_idx
 ALTER TABLE posting ADD CONSTRAINT posting_does_not_reverse_itself
     CHECK (reverses_posting_id IS NULL OR reverses_posting_id <> id);
 
+-- A reversal is never itself reversed.
+--
+-- The unique index above stops one posting being reversed twice, but says nothing about a chain:
+-- A reversed by B, then B reversed by C. Each link is unique, and the balances still add up,
+-- while the money has moved back and forth a third time on a correction nobody authorised. A
+-- CHECK cannot see another row, so this needs a trigger.
+CREATE OR REPLACE FUNCTION posting_reversal_is_not_reversed() RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.reverses_posting_id IS NOT NULL
+       AND EXISTS (SELECT 1 FROM posting
+                   WHERE id = NEW.reverses_posting_id
+                     AND reverses_posting_id IS NOT NULL) THEN
+        RAISE EXCEPTION 'posting % is a reversal and cannot be reversed', NEW.reverses_posting_id
+            USING ERRCODE = 'integrity_constraint_violation';
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER posting_no_reversal_chain
+    BEFORE INSERT ON posting
+    FOR EACH ROW EXECUTE FUNCTION posting_reversal_is_not_reversed();
+
 -- Immutability, enforced where it cannot be argued with.
 CREATE OR REPLACE FUNCTION posting_is_append_only() RETURNS TRIGGER AS $$
 BEGIN
@@ -92,6 +115,13 @@ CREATE TABLE balance (
 
 COMMENT ON TABLE balance IS
     'Materialized balance per account, verified against the postings by the trial balance.';
+
+-- Balances may legitimately be updated - that is what a posting does - but never wiped wholesale.
+-- Emptying this table would leave every posting intact and every balance gone, a state the trial
+-- balance reports as total drift and nothing in the product knows how to rebuild.
+CREATE TRIGGER balance_no_truncate
+    BEFORE TRUNCATE ON balance
+    FOR EACH STATEMENT EXECUTE FUNCTION posting_is_append_only();
 
 -- The internal side of the chart of accounts. Customer and box accounts are opened on demand.
 INSERT INTO account (code, kind) VALUES

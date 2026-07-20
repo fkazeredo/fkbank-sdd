@@ -237,7 +237,7 @@ class LedgerAcceptanceIT extends LedgerIntegrationTest {
     assertThat(afterReversal).isEqualTo(snapshot);
   }
 
-  // ---------------------------------------- criterion 7 / BR-6: reversal happens at most once
+  // ---------------------------------------------------- reversal happens at most once, ever
 
   @Test
   @DisplayName("AC7 - reversing an already-reversed posting raises REVERSAL_NOT_ALLOWED")

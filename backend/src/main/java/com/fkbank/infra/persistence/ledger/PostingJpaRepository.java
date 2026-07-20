@@ -13,15 +13,21 @@ interface PostingJpaRepository extends JpaRepository<PostingEntity, UUID> {
   /**
    * Everything ever taken out of any account.
    *
-   * <p>Every posting has exactly one debit leg carrying the whole amount, so this sums the amount
-   * column. The credit total does the same for the other leg: with this schema the two are equal
-   * by construction, and the trial balance compares them anyway so that a future posting shape
-   * with more than two legs cannot break double entry unnoticed.
+   * <p>Both totals sum the same column, and that is not an oversight to be dressed up: a posting
+   * carries one amount that is debited from one account and credited to another, so with this
+   * schema debits equal credits by construction and {@code isBalanced()} cannot report otherwise.
+   * The comparison is kept because the day a posting grows a third leg — a fee, a split
+   * settlement — is the day it stops being free, and a check that was already there fails loudly
+   * instead of being remembered.
+   *
+   * <p>What actually catches a corrupt ledger today is the per-account comparison in
+   * {@link #netAmountByAccount()}: a tampered balance leaves debits equal to credits while the
+   * account itself no longer matches its own postings.
    */
   @Query("select coalesce(sum(p.amount), 0) from PostingEntity p")
   BigDecimal sumOfDebitLegs();
 
-  /** Everything ever put into any account. */
+  /** Everything ever put into any account. See {@link #sumOfDebitLegs()}. */
   @Query("select coalesce(sum(p.amount), 0) from PostingEntity p")
   BigDecimal sumOfCreditLegs();
 

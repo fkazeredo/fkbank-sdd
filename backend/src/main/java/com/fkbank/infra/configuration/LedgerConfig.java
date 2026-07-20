@@ -10,7 +10,10 @@ import org.springframework.aop.framework.ProxyFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.interceptor.MatchAlwaysTransactionAttributeSource;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.interceptor.NameMatchTransactionAttributeSource;
+import org.springframework.transaction.interceptor.RuleBasedTransactionAttribute;
+import org.springframework.transaction.interceptor.TransactionAttributeSource;
 import org.springframework.transaction.interceptor.TransactionInterceptor;
 
 /**
@@ -45,11 +48,36 @@ class LedgerConfig {
 
     TransactionInterceptor interceptor = new TransactionInterceptor();
     interceptor.setTransactionManager(transactionManager);
-    interceptor.setTransactionAttributeSource(new MatchAlwaysTransactionAttributeSource());
+    interceptor.setTransactionAttributeSource(ledgerTransactionAttributes());
 
     ProxyFactory factory = new ProxyFactory(ledger);
     factory.setProxyTargetClass(true);
     factory.addAdvice(interceptor);
     return (Ledger) factory.getProxy();
+  }
+
+  /**
+   * One transaction per operation, and a stricter one for the audit.
+   *
+   * <p>Movements run at the database default. They serialize on the row locks they take, so a
+   * stronger isolation level would buy nothing and cost contention on the hottest path in the
+   * product.
+   *
+   * <p>The trial balance is different: it reads the postings, then the balances, then the two
+   * totals, and compares figures that must describe the same instant. At read-committed each of
+   * those statements sees whatever had committed by the time it ran, so a movement landing
+   * midway through makes the audit report drift on an account that is perfectly fine — and an
+   * audit that cries wolf is one people learn to ignore. A repeatable read gives all four
+   * statements one snapshot.
+   */
+  private static TransactionAttributeSource ledgerTransactionAttributes() {
+    RuleBasedTransactionAttribute audit = new RuleBasedTransactionAttribute();
+    audit.setIsolationLevel(TransactionDefinition.ISOLATION_REPEATABLE_READ);
+    audit.setReadOnly(true);
+
+    NameMatchTransactionAttributeSource attributes = new NameMatchTransactionAttributeSource();
+    attributes.addTransactionalMethod("trialBalance", audit);
+    attributes.addTransactionalMethod("*", new RuleBasedTransactionAttribute());
+    return attributes;
   }
 }

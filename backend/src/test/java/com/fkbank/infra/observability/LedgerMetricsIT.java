@@ -49,9 +49,18 @@ class LedgerMetricsIT extends LedgerIntegrationTest {
     assertThat(countOf("reversal")).isEqualTo(reversalsBefore + 1);
   }
 
+  /**
+   * Note what this does and does not prove.
+   *
+   * <p>A refused movement is rejected before the event is ever published, so this would pass
+   * whether the counter listened inside the transaction or after it commits. It is still worth
+   * keeping — a refusal reaching the counter by some other route would be a real defect — but the
+   * after-commit guarantee itself is proven by the acceptance suite, which rolls a posting back
+   * after publication.
+   */
   @Test
-  @DisplayName("does not count a posting that was rolled back")
-  void ignoresARolledBackPosting() {
+  @DisplayName("does not count a movement that was refused")
+  void ignoresARefusedPosting() {
     Account from = fixture.customerAccountHolding("10.00");
     Account to = fixture.emptyCustomerAccount();
     double before = countOf("posting");
