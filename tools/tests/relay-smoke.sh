@@ -48,6 +48,10 @@ expect 'gate dev-verified verify-slice fail' 2 bash "$GATE" 0099 dev-verified
 # (9) dev-verified gate blocks a failed E2E.
 mk99 "{\"slice\":\"SPEC-0099\",\"status\":\"DEV_VERIFIED\",\"fit\":\"FIT\",\"fit_signals\":[1],\"fit_unsafe_condition\":false,\"execution_mode\":\"sequential\",\"verify_slice\":\"pass\",\"e2e\":\"fail\",\"e2e_applicable\":true,\"acceptance_evidence\":\"complete\",\"candidate_sha\":\"$HEAD\"}"
 expect 'gate dev-verified e2e fail' 2 bash "$GATE" 0099 dev-verified
+cp "$ROOT/.claude/runtime/SPEC-0099/dev-verification.json" "$RUN/valid-evidence.json"
+printf '{"candidate_sha":"%s","commands":[],"acceptance_criteria":[],"skipped_mandatory_controls":[]}' "$HEAD" > "$ROOT/.claude/runtime/SPEC-0099/dev-verification.json"
+expect 'gate dev-verified cosmetic evidence' 2 bash "$GATE" 0099 dev-verified
+cp "$RUN/valid-evidence.json" "$ROOT/.claude/runtime/SPEC-0099/dev-verification.json"
 # (11) qa-preflight passes on fresh DEV_VERIFIED evidence; a stale candidate SHA is blocked.
 mk99 "{\"slice\":\"SPEC-0099\",\"status\":\"DEV_VERIFIED\",\"fit\":\"FIT\",\"fit_signals\":[1],\"fit_unsafe_condition\":false,\"execution_mode\":\"sequential\",\"verify_slice\":\"pass\",\"e2e\":\"pass\",\"e2e_applicable\":true,\"acceptance_evidence\":\"complete\",\"candidate_sha\":\"$HEAD\"}"
 expect 'gate qa-preflight fresh' 0 bash "$GATE" 0099 qa-preflight

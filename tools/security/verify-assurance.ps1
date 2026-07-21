@@ -35,6 +35,15 @@ function Run-Control([string]$Name,[scriptblock]$Command){
   finally{$ErrorActionPreference=$prev}
 }
 
+function Invoke-ProcessWithTimeout([string]$FilePath,[string[]]$Arguments,[string]$WorkingDirectory,[int]$TimeoutSeconds){
+  $p=Start-Process -FilePath $FilePath -ArgumentList $Arguments -WorkingDirectory $WorkingDirectory -PassThru -NoNewWindow
+  if(-not $p.WaitForExit($TimeoutSeconds*1000)){
+    try{$p.Kill($true)}catch{}
+    throw "$FilePath timed out after ${TimeoutSeconds}s"
+  }
+  if($p.ExitCode -ne 0){throw "$FilePath exited with code $($p.ExitCode)"}
+}
+
 function Get-GitleaksSubcommand{
   # gitleaks 8.19 replaced `detect` with `git` (and moved the repo from --source to a positional
   # argument). Probe the installed binary instead of assuming a vintage, so an operator with
@@ -57,8 +66,8 @@ try{
   # lacks the tool — that would turn a missing control into a silent PASS.
   if(Get-Command gitleaks -ErrorAction SilentlyContinue){
     $sub = Get-GitleaksSubcommand
-    if($sub -eq 'git'){Run-Control 'secrets' { & gitleaks git --no-banner --redact $root }}
-    else{Run-Control 'secrets' { & gitleaks detect --source $root --no-banner --redact }}
+    if($sub -eq 'git'){Run-Control 'secrets' { Invoke-ProcessWithTimeout 'gitleaks' @('git','--no-banner','--redact',$root) $root 600 }}
+    else{Run-Control 'secrets' { Invoke-ProcessWithTimeout 'gitleaks' @('detect','--source',$root,'--no-banner','--redact') $root 600 }}
   }elseif(Get-Command docker -ErrorAction SilentlyContinue){
     Run-Control 'secrets(docker)' { & docker run --rm -v "${root}:/repo:ro" $GitleaksImage git --no-banner --redact /repo }
   }elseif($RequiresHeavy){throw 'BLOCKED: gitleaks (local binary or Docker) is required for this candidate'}
@@ -67,7 +76,7 @@ try{
   # Dependencies, licenses, repository configuration, Docker/Compose and built images use the
   # same digest-pinned Trivy wrapper as CI. Heavy assurance may never silently omit this family.
   $bash=Get-Command bash -ErrorAction SilentlyContinue
-  if($bash){ Run-Control 'supply-chain-and-deployment' { & bash tools/security/supply-chain/trivy-scan.sh all } }
+  if($bash){ Run-Control 'supply-chain-and-deployment' { Invoke-ProcessWithTimeout $bash.Source @('tools/security/supply-chain/trivy-scan.sh','all') $root 3600 } }
   elseif($RequiresHeavy){throw 'BLOCKED: bash is required to run the canonical Trivy supply-chain wrapper'}
   else{$results+='supply-chain-and-deployment=NOT_APPLICABLE(no bash)'}
 
@@ -79,7 +88,7 @@ try{
   if($backendDir){
     $mvnw=Join-Path $backendDir 'mvnw.cmd'
     if(Test-Path $mvnw){
-      Run-Control 'backend-tests' { Push-Location $backendDir; try{ & $mvnw -B verify }finally{ Pop-Location } }
+      Run-Control 'backend-tests' { Invoke-ProcessWithTimeout $mvnw @('-B','verify') $backendDir 1800 }
     }elseif($RequiresHeavy){throw 'BLOCKED: Maven wrapper is required for backend assurance'}
     else{$results+='backend-tests=NOT_APPLICABLE(no Maven wrapper)'}
   }else{$results+='backend-tests=NOT_APPLICABLE(no backend)'}
@@ -89,7 +98,7 @@ try{
   if(Test-Path 'compose.security.yaml'){
     $env:APP_SECURITY_TARGET=$Target
     try{
-      Run-Control 'dynamic-security' { & docker compose -f compose.security.yaml up --build --abort-on-container-exit --exit-code-from security-tests }
+      Run-Control 'dynamic-security' { Invoke-ProcessWithTimeout 'docker' @('compose','-f','compose.security.yaml','up','--build','--abort-on-container-exit','--exit-code-from','security-tests') $root 2700 }
     }finally{
       # Teardown must never decide the outcome: `docker compose down` writes its progress to
       # stderr, which under $ErrorActionPreference='Stop' becomes a terminating error and would
@@ -105,7 +114,7 @@ try{
     $zapArtifacts=@('zap-report.html','zap-api-report.html')
     $missing=@($zapArtifacts|Where-Object{-not (Test-Path -LiteralPath (Join-Path $evidence $_))})
     if($missing.Count -eq 0){$results+="dast-report=$evidence/zap-report.html"}
-    else{$results+="dast-report=MISSING ($($missing -join ', ')) - no ZAP artifact was produced";$script:hadFailure=$true}
+    else{$results+="dynamic-security=FAIL; dast-report=MISSING ($($missing -join ', ')) - no ZAP artifact was produced";$script:hadFailure=$true}
   }elseif($RequiresHeavy){throw 'BLOCKED: compose.security.yaml and its pinned DAST/pentest profile are required'}
   else{$results+='dynamic-security=NOT_APPLICABLE(no application)'}
 

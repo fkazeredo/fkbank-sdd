@@ -3,9 +3,8 @@
 # Mirrors check-slice-gate.ps1. The runtime dir is resolved from the id alone: a numeric id is
 # padded to SPEC-NNNN, an already-formed SPEC-NNNN is accepted. Root is $CLAUDE_PROJECT_DIR or the
 # repo root (this script's dir/../..). state.json lives at <root>/.claude/runtime/<SPEC-NNNN>.
-# The flat-field gates (fit, dev-verified, qa-preflight) are pure bash+grep+git so they run where
-# python3 is unavailable; only the parallel gate parses JSON arrays with python3, and only when a
-# parallel-plan.json is present.
+# The flat-field gates use bash/grep/git plus python3 for structured JSON evidence; the parallel
+# gate also requires python3 when a parallel-plan.json is present.
 set -uo pipefail
 
 usage() {

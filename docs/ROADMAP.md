@@ -64,7 +64,7 @@ tests; a person opens an account and logs in.
 Blocking: none · Assurance `SECURITY_OBSERVATIONS` (candidate `e12711b`). Draft release notes:
 `docs/release-notes/S1.md`. Non-blocking pre-production security follow-ups (SEC-F-01, F-02, F-03,
 F-04) are tracked in `docs/security/DECISIONS.md`; the historical detail lives in
-`docs/qa/SPRINT-1-CLOSURE.md` and Git history.
+Git history.
 
 ## Sprint 2
 
