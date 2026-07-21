@@ -40,14 +40,14 @@ describe('Statement', () => {
       fixture.nativeElement.querySelector('[data-testid="statement-loading"]'),
     ).not.toBeNull();
 
-    http.expectOne(STATEMENT_URL).flush({ lines: [], nextCursor: null });
+    http.expectOne((req) => req.url === STATEMENT_URL).flush({ lines: [], nextCursor: null });
   });
 
   it('shows the empty message when the statement has no lines', async () => {
     const fixture = TestBed.createComponent(Statement);
     fixture.detectChanges();
 
-    http.expectOne(STATEMENT_URL).flush({ lines: [], nextCursor: null });
+    http.expectOne((req) => req.url === STATEMENT_URL).flush({ lines: [], nextCursor: null });
     await settle();
     fixture.detectChanges();
 
@@ -59,7 +59,7 @@ describe('Statement', () => {
     const fixture = TestBed.createComponent(Statement);
     fixture.detectChanges();
 
-    http.expectOne(STATEMENT_URL).flush({ lines: [A_LINE], nextCursor: null });
+    http.expectOne((req) => req.url === STATEMENT_URL).flush({ lines: [A_LINE], nextCursor: null });
     await settle();
     fixture.detectChanges();
 
@@ -79,7 +79,7 @@ describe('Statement', () => {
     fixture.detectChanges();
 
     http
-      .expectOne(STATEMENT_URL)
+      .expectOne((req) => req.url === STATEMENT_URL)
       .flush({}, { status: 500, statusText: 'Internal Server Error' });
     await settle();
     fixture.detectChanges();
@@ -92,7 +92,7 @@ describe('Statement', () => {
     ) as HTMLButtonElement;
     retry.click();
 
-    http.expectOne(STATEMENT_URL).flush({ lines: [], nextCursor: null });
+    http.expectOne((req) => req.url === STATEMENT_URL).flush({ lines: [], nextCursor: null });
     await settle();
     fixture.detectChanges();
 
@@ -103,7 +103,7 @@ describe('Statement', () => {
     const fixture = TestBed.createComponent(Statement);
     fixture.detectChanges();
 
-    http.expectOne(STATEMENT_URL).flush({ lines: [], nextCursor: null });
+    http.expectOne((req) => req.url === STATEMENT_URL).flush({ lines: [], nextCursor: null });
     await settle();
     fixture.detectChanges();
 
@@ -117,5 +117,45 @@ describe('Statement', () => {
     );
     expect(request.request.params.has('cursor')).toBe(false);
     request.flush({ lines: [], nextCursor: null });
+  });
+
+  it('moves to the previous month and back, never past the current one', async () => {
+    const fixture = TestBed.createComponent(Statement);
+    fixture.detectChanges();
+
+    const first = http.expectOne((req) => req.url === STATEMENT_URL);
+    const initialFrom = first.request.params.get('from');
+    first.flush({ lines: [], nextCursor: null });
+    await settle();
+    fixture.detectChanges();
+
+    // The next-month control is disabled on the current month - there is nothing later to show.
+    const nextButton = fixture.nativeElement.querySelector(
+      '[data-testid="statement-period-next"]',
+    ) as HTMLButtonElement;
+    expect(nextButton.disabled).toBe(true);
+
+    const previousButton = fixture.nativeElement.querySelector(
+      '[data-testid="statement-period-previous"]',
+    ) as HTMLButtonElement;
+    previousButton.click();
+
+    const second = http.expectOne((req) => req.url === STATEMENT_URL);
+    const previousFrom = second.request.params.get('from');
+    expect(previousFrom).not.toBe(initialFrom);
+    expect(new Date(previousFrom as string).getTime()).toBeLessThan(
+      new Date(initialFrom as string).getTime(),
+    );
+    second.flush({ lines: [], nextCursor: null });
+    await settle();
+    fixture.detectChanges();
+
+    // Now one month back, the next-month control is enabled again, returning to the current month.
+    expect(nextButton.disabled).toBe(false);
+    nextButton.click();
+
+    const third = http.expectOne((req) => req.url === STATEMENT_URL);
+    expect(third.request.params.get('from')).toBe(initialFrom);
+    third.flush({ lines: [], nextCursor: null });
   });
 });

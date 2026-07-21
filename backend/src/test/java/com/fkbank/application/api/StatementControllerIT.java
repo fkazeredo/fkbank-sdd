@@ -88,6 +88,30 @@ class StatementControllerIT {
   }
 
   @Test
+  @DisplayName(
+      "answers 422 with a domain-language message for size/from/to, never a framework type name (QA-0003-01)")
+  void refusesUnparsableFiltersWithoutLeakingFrameworkTypes() throws Exception {
+    OnboardingFixture.SignedUpCustomer customer = onboarding.approvedCustomer();
+    String token = tokenFor(customer);
+
+    HttpResponse<String> badSize = get("/api/account/statement?size=notanumber", token);
+    assertThat(badSize.statusCode()).isEqualTo(422);
+    assertThat(badSize.body())
+        .contains("size must be a whole number, was notanumber")
+        .doesNotContain("java.lang")
+        .doesNotContain("MethodArgumentTypeMismatch")
+        .doesNotContain("RequestParam");
+
+    HttpResponse<String> badFrom = get("/api/account/statement?from=2026-07-01&to=2026-07-02", token);
+    assertThat(badFrom.statusCode()).isEqualTo(422);
+    assertThat(badFrom.body())
+        .contains("from must be a full ISO-8601 instant, was 2026-07-01")
+        .doesNotContain("java.time")
+        .doesNotContain("MethodArgumentTypeMismatch")
+        .doesNotContain("RequestParam");
+  }
+
+  @Test
   @DisplayName("fetches a receipt by its posting id, showing rail, status and amount")
   void fetchesAReceipt() throws Exception {
     OnboardingFixture.SignedUpCustomer customer = onboarding.approvedCustomer();

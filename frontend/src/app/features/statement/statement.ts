@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { MoneyPipe } from '../../shared/ui/money.pipe';
@@ -9,11 +9,33 @@ import { Direction, StatementLine, StatementService } from './statement.service'
 type DirectionFilter = 'ALL' | Direction;
 
 /**
+ * The product's fixed MVP timezone (`docs/DOMAIN.md` — "product timezone UTC-3 fixed in the
+ * MVP"), the same boundary the backend's `StatementFilter.currentMonth` draws a period at.
+ * Fixed rather than derived from the browser, so a period picked here always matches the month
+ * the backend would compute by itself.
+ */
+const PRODUCT_TIMEZONE_OFFSET_MINUTES = -180;
+
+/** The `[from, to)` window for the calendar month `monthsAgo` months before the current one. */
+function monthWindow(monthsAgo: number): { from: string; to: string } {
+  const nowAtProductTimezone = new Date(Date.now() + PRODUCT_TIMEZONE_OFFSET_MINUTES * 60_000);
+  const year = nowAtProductTimezone.getUTCFullYear();
+  const month = nowAtProductTimezone.getUTCMonth() - monthsAgo;
+  const startOfMonth = Date.UTC(year, month, 1, 0, 0, 0);
+  const startOfNextMonth = Date.UTC(year, month + 1, 1, 0, 0, 0);
+  return {
+    from: new Date(startOfMonth - PRODUCT_TIMEZONE_OFFSET_MINUTES * 60_000).toISOString(),
+    to: new Date(startOfNextMonth - PRODUCT_TIMEZONE_OFFSET_MINUTES * 60_000).toISOString(),
+  };
+}
+
+/**
  * The account's statement: every posting, newest first, with a receipt behind each line.
  *
- * Filtering by direction restarts from page one, since the backend's cursor is only meaningful
- * for the filter it was issued under. Loading more appends to what is already shown instead of
- * replacing it, so the person never loses their place while paging through history.
+ * Filtering by direction, or moving to a different month, both restart from page one, since the
+ * backend's cursor is only meaningful for the exact filter and period it was issued under.
+ * Loading more within the current period appends to what is already shown instead of replacing
+ * it, so the person never loses their place while paging through history.
  */
 @Component({
   selector: 'fk-statement',
@@ -28,9 +50,13 @@ export class Statement {
   readonly lines = signal<readonly StatementLine[]>([]);
   readonly nextCursor = signal<string | null>(null);
   readonly filter = signal<DirectionFilter>('ALL');
+  readonly monthsAgo = signal(0);
   readonly loading = signal(true);
   readonly loadingMore = signal(false);
   readonly failed = signal(false);
+
+  readonly period = computed(() => monthWindow(this.monthsAgo()));
+  readonly canGoToNextMonth = computed(() => this.monthsAgo() > 0);
 
   constructor() {
     void this.load();
@@ -41,7 +67,7 @@ export class Statement {
     this.failed.set(false);
 
     try {
-      const page = await this.statements.list({ direction: this.directionParam() });
+      const page = await this.statements.list({ ...this.period(), direction: this.directionParam() });
       this.lines.set(page.lines);
       this.nextCursor.set(page.nextCursor);
     } catch {
@@ -62,7 +88,11 @@ export class Statement {
     this.loadingMore.set(true);
 
     try {
-      const page = await this.statements.list({ direction: this.directionParam(), cursor });
+      const page = await this.statements.list({
+        ...this.period(),
+        direction: this.directionParam(),
+        cursor,
+      });
       this.lines.set([...this.lines(), ...page.lines]);
       this.nextCursor.set(page.nextCursor);
     } catch {
@@ -78,6 +108,19 @@ export class Statement {
     }
 
     this.filter.set(next);
+    await this.load();
+  }
+
+  async previousMonth(): Promise<void> {
+    this.monthsAgo.update((current) => current + 1);
+    await this.load();
+  }
+
+  async nextMonth(): Promise<void> {
+    if (!this.canGoToNextMonth()) {
+      return;
+    }
+    this.monthsAgo.update((current) => current - 1);
     await this.load();
   }
 

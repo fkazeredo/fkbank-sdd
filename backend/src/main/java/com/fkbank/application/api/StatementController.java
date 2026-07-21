@@ -13,6 +13,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.format.DateTimeParseException;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
@@ -79,17 +80,19 @@ public class StatementController {
   @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
   public StatementPageResponse statement(
       @AuthenticationPrincipal Jwt jwt,
-      @RequestParam(required = false) Instant from,
-      @RequestParam(required = false) Instant to,
+      @RequestParam(required = false) String from,
+      @RequestParam(required = false) String to,
       @RequestParam(required = false) String direction,
       @RequestParam(required = false) String cursor,
-      @RequestParam(required = false) Integer size) {
+      @RequestParam(required = false) String size) {
 
+    Instant parsedFrom = instantOf("from", from);
+    Instant parsedTo = instantOf("to", to);
     Direction parsedDirection = directionOf(direction);
     StatementFilter filter =
-        (from == null || to == null)
+        (parsedFrom == null || parsedTo == null)
             ? StatementFilter.currentMonth(parsedDirection, clock)
-            : StatementFilter.of(from, to, parsedDirection);
+            : StatementFilter.of(parsedFrom, parsedTo, parsedDirection);
     Optional<StatementCursor> parsedCursor =
         cursor == null ? Optional.empty() : Optional.of(StatementCursor.decode(cursor));
 
@@ -132,9 +135,33 @@ public class StatementController {
     };
   }
 
-  private static int pageSizeOf(Integer requested) {
-    if (requested == null) {
+  /**
+   * Parses a period bound the same way {@code direction}/{@code cursor} are parsed: as a raw
+   * string, with a curated message on failure — never a typed {@code @RequestParam}, whose
+   * conversion failure is Spring's own generic {@code MethodArgumentTypeMismatchException},
+   * naming its internal types (QA-0003-01) rather than this endpoint's own domain language.
+   */
+  private static Instant instantOf(String paramName, String raw) {
+    if (raw == null || raw.isBlank()) {
+      return null;
+    }
+    try {
+      return Instant.parse(raw);
+    } catch (DateTimeParseException e) {
+      throw new IllegalArgumentException(
+          paramName + " must be a full ISO-8601 instant, was " + raw);
+    }
+  }
+
+  private static int pageSizeOf(String raw) {
+    if (raw == null || raw.isBlank()) {
       return DEFAULT_PAGE_SIZE;
+    }
+    int requested;
+    try {
+      requested = Integer.parseInt(raw);
+    } catch (NumberFormatException e) {
+      throw new IllegalArgumentException("size must be a whole number, was " + raw);
     }
     if (requested < 1 || requested > MAX_PAGE_SIZE) {
       throw new IllegalArgumentException("size must be between 1 and " + MAX_PAGE_SIZE);

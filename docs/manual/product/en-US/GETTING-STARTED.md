@@ -83,10 +83,12 @@ part of.
 - **Newest first.** Each line shows what moved, whether it came in or went out, and what your
   balance was right after that line — the top line's balance always matches what your account
   shows today.
+- **Move between months.** The statement opens on the current month; the arrows beside the month
+  name move to an earlier or a later one (never past the current month).
 - **Filter by direction.** Show everything, only money that came in, or only money that went out.
-- **Load more.** The statement opens with the current month's most recent lines; choose **Load
-  more** to keep going further back. Nothing you already saw is repeated or skipped, even if a
-  new movement lands while you are still paging through older ones.
+- **Load more.** Within the month you are looking at, choose **Load more** to see older lines from
+  that same month. Nothing you already saw is repeated or skipped, even if a new movement lands
+  while you are still paging through older ones.
 - **Open a receipt.** Choose any line to see its receipt: the amount, when it happened, which
   channel it travelled by, whether it still stands or was corrected, and — for a transfer between
   two FKBANK customers — the other person's CPF, shown with the middle digits hidden

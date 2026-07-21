@@ -86,9 +86,11 @@ participou.
 - **Mais recentes primeiro.** Cada linha mostra o que se moveu, se entrou ou saiu, e qual era seu
   saldo logo depois daquela linha — o saldo da linha mais recente sempre corresponde ao que sua
   conta mostra hoje.
+- **Navegue entre os meses.** O extrato abre no mês atual; as setas ao lado do nome do mês movem
+  para um mês anterior ou posterior (nunca além do mês atual).
 - **Filtre por direção.** Mostre tudo, só o que entrou, ou só o que saiu.
-- **Carregar mais.** O extrato abre com as linhas mais recentes do mês atual; escolha **Carregar
-  mais** para ver mais para trás. Nada que você já viu se repete ou é pulado, mesmo que uma
+- **Carregar mais.** Dentro do mês que você está vendo, escolha **Carregar mais** para ver linhas
+  mais antigas daquele mesmo mês. Nada que você já viu se repete ou é pulado, mesmo que uma
   movimentação nova chegue enquanto você ainda está percorrendo linhas mais antigas.
 - **Abra um comprovante.** Escolha qualquer linha para ver seu comprovante: o valor, quando
   aconteceu, por qual canal passou, se ainda vale ou foi corrigida e — no caso de uma transferência
