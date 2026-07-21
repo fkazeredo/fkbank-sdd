@@ -1,0 +1,101 @@
+<section data-testid="feature-statement" class="rounded-lg border border-slate-200 bg-white p-8">
+  <h1 class="text-xl font-semibold">{{ t('statement.title') }}</h1>
+
+  <div class="mt-4 flex gap-2" role="group" aria-label="{{ t('statement.title') }}">
+    <button
+      type="button"
+      data-testid="statement-filter-all"
+      class="rounded border px-3 py-1 text-sm font-medium"
+      [class.border-violet-600]="filter() === 'ALL'"
+      [class.text-violet-700]="filter() === 'ALL'"
+      [class.border-slate-300]="filter() !== 'ALL'"
+      (click)="setFilter('ALL')"
+    >
+      {{ t('statement.filter.all') }}
+    </button>
+    <button
+      type="button"
+      data-testid="statement-filter-in"
+      class="rounded border px-3 py-1 text-sm font-medium"
+      [class.border-violet-600]="filter() === 'IN'"
+      [class.text-violet-700]="filter() === 'IN'"
+      [class.border-slate-300]="filter() !== 'IN'"
+      (click)="setFilter('IN')"
+    >
+      {{ t('statement.filter.in') }}
+    </button>
+    <button
+      type="button"
+      data-testid="statement-filter-out"
+      class="rounded border px-3 py-1 text-sm font-medium"
+      [class.border-violet-600]="filter() === 'OUT'"
+      [class.text-violet-700]="filter() === 'OUT'"
+      [class.border-slate-300]="filter() !== 'OUT'"
+      (click)="setFilter('OUT')"
+    >
+      {{ t('statement.filter.out') }}
+    </button>
+  </div>
+
+  @if (loading()) {
+    <p data-testid="statement-loading" role="status" class="mt-6 text-slate-600">
+      {{ t('statement.loading') }}
+    </p>
+  } @else if (failed()) {
+    <div class="mt-6">
+      <p
+        role="alert"
+        data-testid="statement-error"
+        class="rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-800"
+      >
+        {{ t('statement.error') }}
+      </p>
+      <button
+        type="button"
+        data-testid="statement-retry"
+        class="mt-4 rounded border border-slate-300 px-4 py-2 font-medium hover:bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-600"
+        (click)="load()"
+      >
+        {{ t('statement.retry') }}
+      </button>
+    </div>
+  } @else if (lines().length === 0) {
+    <p data-testid="statement-empty" class="mt-6 text-slate-600">{{ t('statement.empty') }}</p>
+  } @else {
+    <ul data-testid="statement-lines" class="mt-6 divide-y divide-slate-200">
+      @for (line of lines(); track line.postingId) {
+        <li>
+          <a
+            [routerLink]="['/account/statement', line.postingId]"
+            data-testid="statement-line"
+            class="flex items-center justify-between gap-4 py-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-600 hover:bg-slate-50"
+          >
+            <span class="text-sm text-slate-600">{{ line.occurredAt | date: 'short' }}</span>
+            <span
+              data-testid="statement-line-amount"
+              class="font-medium tabular-nums"
+              [class.text-emerald-700]="line.direction === 'IN'"
+            >
+              {{ line.direction === 'IN' ? '+' : '-' }}{{ line.amount | money: line.currency }}
+            </span>
+            <span data-testid="statement-line-balance" class="text-xs text-slate-500">
+              {{ t('statement.runningBalance') }}: {{ line.runningBalance | money: line.currency }}
+            </span>
+          </a>
+        </li>
+      }
+    </ul>
+
+    @if (nextCursor()) {
+      <button
+        type="button"
+        data-testid="statement-load-more"
+        class="mt-6 rounded border border-slate-300 px-4 py-2 font-medium hover:bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-600"
+        [disabled]="loadingMore()"
+        (click)="loadMore()"
+      >
+        {{ t('statement.loadMore') }}
+      </button>
+    }
+  }
+</section>
