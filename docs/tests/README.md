@@ -19,3 +19,4 @@ What the main agent never does is restate a QA verdict as its own.
 | `TB-0018.md` | SPEC-0018 — walking skeleton | PASS_WITH_OBSERVATIONS |
 | `TB-0016.md` | SPEC-0016 — observability baseline | QA_VERIFIED (after one rework cycle) |
 | `TB-0001.md` | SPEC-0001 — ledger core | PASS_WITH_OBSERVATIONS (run 2 of 2); observations closed post-review by the main agent |
+| `TB-0003.md` | SPEC-0003 — statement and receipts | QA_OBSERVATIONS (run 1 of 2) |
