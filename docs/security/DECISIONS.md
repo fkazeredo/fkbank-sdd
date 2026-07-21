@@ -58,3 +58,14 @@ commit's content, so it holds identically on every one of them.
 > The underlying finding was independently re-confirmed on `3dec822` (rulesets `[]`,
 > `branches/develop/protection` 404, `main` absent from `origin`). If the owner intended a
 > narrower SHA scope than the stated window, this amendment is the thing to reverse.
+
+> **Amendment — 2026-07-20, security-assurance run 5.** The `v0.1.0` window advanced to its
+> version-stamped tip: `ea4e1ed` (F-01 frontend fix), `61631c3` (release Prepare `0.1.0`) and
+> `e12711b` (test-only UTC clock fix), the `release/0.1.0` tip now under assurance. `e12711b` is
+> enumerated here so the affected-SHA list does not go stale as the candidate advanced — the same
+> defect the run-3 amendment corrected. The finding was independently re-confirmed on `e12711b`
+> (rulesets `[]`, `branches/develop/protection` 404, `branches/main/protection` 404 — `main` absent
+> from `origin`); it is a property of the GitHub repository's configuration, not of any commit's
+> content, so it holds identically. **No term of the owner's decision was changed:** not its scope
+> (the `v0.1.0` internal pre-release window, which `e12711b` is inside), not its conditions,
+> remediation deadline, or recorded consequence that `SECURITY_VERIFIED` is unavailable.
