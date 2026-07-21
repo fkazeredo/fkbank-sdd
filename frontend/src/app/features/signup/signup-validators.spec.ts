@@ -4,6 +4,7 @@ import {
   adultBirthDateValidator,
   completedYears,
   cpfValidator,
+  fullNameValidator,
   isRealDate,
   isValidCpf,
   monthlyIncomeValidator,
@@ -29,6 +30,34 @@ describe('normalizeCpf', () => {
 
   it('drops every kind of punctuation and spacing', () => {
     expect(normalizeCpf(' 123 456 789 09 ')).toBe('12345678909');
+  });
+});
+
+describe('fullNameValidator', () => {
+  it('accepts a name with a family name', () => {
+    expect(fullNameValidator(control('Ada Lovelace'))).toBeNull();
+  });
+
+  it('rejects a single word as an incomplete name — this is the value that used to dead-end', () => {
+    // "Bob" cleared the old minLength(2) and reached the server, which refused it for having no
+    // family name; the screen then showed a general message pinned to no field. Caught inline now.
+    expect(fullNameValidator(control('Bob'))).toEqual({ nameIncomplete: true });
+  });
+
+  it('rejects a value shorter than three characters', () => {
+    expect(fullNameValidator(control('Bo'))).toEqual({ nameTooShort: true });
+  });
+
+  it('collapses incidental whitespace before judging the length', () => {
+    expect(fullNameValidator(control('  a   b  '))).toBeNull();
+  });
+
+  it('treats a run of spaces as a single word, not a family name', () => {
+    expect(fullNameValidator(control('Prince   '))).toEqual({ nameIncomplete: true });
+  });
+
+  it('passes an empty value through so required owns the empty field', () => {
+    expect(fullNameValidator(control(''))).toBeNull();
   });
 });
 

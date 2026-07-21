@@ -118,35 +118,45 @@ describe('SignupService', () => {
     expect(await outcome).toEqual({ kind: 'duplicate' });
   });
 
-  it('reads field errors from a validation failure sent as an array', async () => {
+  it('reads the code and detail from the problem+json a 422 actually returns', async () => {
+    // The server answers a 422 with a flat problem document — the exact shape asserted by the
+    // backend's SignUpHttpAcceptanceIT — never a per-field array. An earlier version of this
+    // service probed for an `errors` collection that the server does not send, so every 422 came
+    // back empty and the screen had nothing to show.
     const outcome = service.submit(A_REQUEST);
 
-    http
-      .expectOne('/api/signup')
-      .flush(
-        { errors: [{ field: 'cpf', message: 'CPF is not valid.' }] },
-        { status: 422, statusText: 'Unprocessable Content' },
-      );
+    http.expectOne('/api/signup').flush(
+      {
+        type: 'https://fkbank.example/problems/weak-password',
+        title: 'Unprocessable Content',
+        status: 422,
+        detail: 'password must contain a letter and a digit',
+        code: 'WEAK_PASSWORD',
+      },
+      { status: 422, statusText: 'Unprocessable Content' },
+    );
 
     expect(await outcome).toEqual({
       kind: 'invalid',
-      fieldErrors: { cpf: 'CPF is not valid.' },
+      problem: { code: 'WEAK_PASSWORD', detail: 'password must contain a letter and a digit' },
     });
   });
 
-  it('reads field errors nested under the problem detail properties', async () => {
+  it('carries a generic INVALID_SUBMISSION code and its detail through', async () => {
     const outcome = service.submit(A_REQUEST);
 
-    http
-      .expectOne('/api/signup')
-      .flush(
-        { title: 'Unprocessable', properties: { errors: { email: 'E-mail is not valid.' } } },
-        { status: 422, statusText: 'Unprocessable Content' },
-      );
+    http.expectOne('/api/signup').flush(
+      {
+        status: 422,
+        detail: 'full name must include a family name',
+        code: 'INVALID_SUBMISSION',
+      },
+      { status: 422, statusText: 'Unprocessable Content' },
+    );
 
     expect(await outcome).toEqual({
       kind: 'invalid',
-      fieldErrors: { email: 'E-mail is not valid.' },
+      problem: { code: 'INVALID_SUBMISSION', detail: 'full name must include a family name' },
     });
   });
 
@@ -157,7 +167,7 @@ describe('SignupService', () => {
       .expectOne('/api/signup')
       .flush('nothing recognisable', { status: 422, statusText: 'Unprocessable Content' });
 
-    expect(await outcome).toEqual({ kind: 'invalid', fieldErrors: {} });
+    expect(await outcome).toEqual({ kind: 'invalid', problem: { code: null, detail: null } });
   });
 
   it('treats any other failure as a general failure', async () => {

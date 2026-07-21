@@ -4,6 +4,11 @@ $root=(Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
 $evidence=Join-Path $root ".claude/runtime/security-$Target"
 New-Item -ItemType Directory -Force -Path $evidence|Out-Null
 $results=@()
+# The exit code is what an automated gate reads, and this script used to have no `exit` at all:
+# it leaned on PowerShell's implicit code, which the DAST teardown below then overwrote with 0.
+# A run whose controls.txt said `dynamic-security=FAIL` still handed the caller a success. Track
+# failure explicitly and exit on it, so the code and the evidence can never disagree.
+$script:hadFailure=$false
 
 # Scanners run as PINNED containers (tag + digest), never as build dependencies: decision-ladder
 # rung 8 forbids adding a dependency without owner approval, and the assurance track needs a
@@ -24,7 +29,7 @@ function Run-Control([string]$Name,[scriptblock]$Command){
     if($code -ne 0){throw "exit=$code"}
     $script:results+="$Name=PASS"
   }
-  catch{$script:results+="$Name=FAIL ($_)";throw}
+  catch{$script:results+="$Name=FAIL ($_)";$script:hadFailure=$true;throw}
   finally{$ErrorActionPreference=$prev}
 }
 
@@ -85,15 +90,32 @@ try{
       catch{Write-Host "security teardown reported: $_"}
       finally{$ErrorActionPreference=$prev;$global:LASTEXITCODE=0}
     }
-    $results+="dast-report=$evidence/zap-report.html"
+    # Naming the report path is not the same as producing one. When the stack fails to come up,
+    # ZAP never starts and writes nothing, so a recorded path would point at a file that does not
+    # exist and read, to anyone auditing later, like a scan that happened. Assert the artifacts.
+    $zapArtifacts=@('zap-report.html','zap-api-report.html')
+    $missing=@($zapArtifacts|Where-Object{-not (Test-Path -LiteralPath (Join-Path $evidence $_))})
+    if($missing.Count -eq 0){$results+="dast-report=$evidence/zap-report.html"}
+    else{$results+="dast-report=MISSING ($($missing -join ', ')) - no ZAP artifact was produced";$script:hadFailure=$true}
   }elseif($RequiresHeavy){throw 'BLOCKED: compose.security.yaml and its pinned DAST/pentest profile are required'}
   else{$results+='dynamic-security=NOT_APPLICABLE(no application)'}
 
   $results|Set-Content -LiteralPath (Join-Path $evidence 'controls.txt') -Encoding UTF8
   $results|ForEach-Object{Write-Host $_}
-  Write-Host 'verify-assurance: PASS'
+}catch{
+  # A control that threw has already recorded its own FAIL line; this only stops the exception
+  # from escaping before the summary below can run.
+  $script:hadFailure=$true
+  Write-Host "verify-assurance: control failed: $_"
 }finally{
   # Persist whatever controls ran even when one threw, so a BLOCKED/FAIL run still leaves evidence.
   if($results.Count -gt 0){$results|Set-Content -LiteralPath (Join-Path $evidence 'controls.txt') -Encoding UTF8}
   Pop-Location
 }
+
+# Re-read the recorded results rather than trusting the flag alone: whatever a caller acts on
+# must be the same thing an auditor reads in controls.txt.
+if(@($results|Where-Object{$_ -like '*FAIL*'}).Count -gt 0){$hadFailure=$true}
+if($hadFailure){Write-Host 'verify-assurance: FAIL';exit 1}
+Write-Host 'verify-assurance: PASS'
+exit 0

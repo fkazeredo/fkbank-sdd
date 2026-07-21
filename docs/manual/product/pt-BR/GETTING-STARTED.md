@@ -14,6 +14,8 @@ com elas.
 
 Vale saber antes de começar:
 
+- **Informe seu nome completo — nome e sobrenome.** Um nome sozinho não basta; o bureau confere
+  seu nome legal inteiro. O formulário avisa antes de você enviar se estiver faltando algo.
 - **Você pode digitar o CPF de qualquer jeito.** `123.456.789-09` e `12345678909` são o mesmo
   número para nós. Ele é conferido enquanto você digita, então um dígito errado é apontado antes
   de enviar.

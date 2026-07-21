@@ -35,7 +35,12 @@ switch ($role) {
   'designer' { $allowed = $runtime + @('docs/specs/*','docs/exec-plans/*') }
   'qa' { $allowed = $runtime + $qa }
   'reviewer' { $allowed = $runtime }
-  'security' { $allowed = $runtime + @('docs/security/reports/*') }
+  # DECISIONS.md is here because the durable destination for a security decision is the security
+  # document, and no role could reach it - making that written rule impossible to execute. The
+  # role still cannot touch production code, and recording an owner's risk acceptance is not the
+  # same as making it: the acceptance itself remains the owner's, and a transcription that
+  # misstates it is a defect like any other.
+  'security' { $allowed = $runtime + @('docs/security/reports/*','docs/security/DECISIONS.md') }
   'orchestrator' { $allowed = $runtime + @('docs/specs/*','docs/exec-plans/*','docs/qa/*','docs/CHANGELOG.md','docs/ROADMAP.md') }
   'reconciler' { $allowed = $runtime + @('docs/specs/*','docs/exec-plans/*','docs/CHANGELOG.md','docs/ROADMAP.md') }
   'releaser' {

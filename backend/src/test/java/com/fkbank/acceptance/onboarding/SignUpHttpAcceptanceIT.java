@@ -11,6 +11,7 @@ import com.fkbank.testsupport.PkceTokenFlow;
 import jakarta.persistence.EntityManager;
 import java.net.http.HttpResponse;
 import java.time.LocalDate;
+import java.time.ZoneOffset;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -189,7 +190,12 @@ class SignUpHttpAcceptanceIT extends OnboardingHttpAcceptanceTest {
                   Cpfs.random(),
                   "eighteen." + System.nanoTime() + "@example.com",
                   "Passw0rd1",
-                  LocalDate.now().minusYears(18).toString(),
+                  // The server decides adulthood against the UTC date (SignUp reads the clock in
+                  // ZoneOffset.UTC), so this boundary date must be built in UTC too. LocalDate.now()
+                  // reads the JVM's default zone, which west of UTC names the previous day for part
+                  // of each evening and shifts the boundary by a day — green in a UTC-clocked CI,
+                  // red on a Brasilia-clocked machine after 21:00. The clocks have to match.
+                  LocalDate.now(ZoneOffset.UTC).minusYears(18).toString(),
                   "1000.00"));
 
       assertThat(response.statusCode()).isIn(200, 201, 202);
@@ -206,7 +212,8 @@ class SignUpHttpAcceptanceIT extends OnboardingHttpAcceptanceTest {
                   Cpfs.random(),
                   "almost." + System.nanoTime() + "@example.com",
                   "Passw0rd1",
-                  LocalDate.now().minusYears(18).plusDays(1).toString(),
+                  // UTC, to match the server's own clock — see the note in eighteenTodayIsAccepted.
+                  LocalDate.now(ZoneOffset.UTC).minusYears(18).plusDays(1).toString(),
                   "1000.00"));
 
       assertThat(response.statusCode()).isEqualTo(422);

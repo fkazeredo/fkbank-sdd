@@ -12,6 +12,9 @@ const ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
 /** The age at which a person may open an account on their own. */
 const MINIMUM_AGE = 18;
 
+/** The fewest characters a full name may have once incidental whitespace is collapsed. */
+const FULL_NAME_MIN_LENGTH = 3;
+
 /** Strips punctuation so a CPF typed either way becomes the digits the backend expects. */
 export function normalizeCpf(value: string): string {
   return value.replace(/\D/g, '');
@@ -92,6 +95,38 @@ export function todayAsIsoDate(now: Date = new Date()): string {
 
   return `${year}-${month}-${day}`;
 }
+
+/**
+ * Rejects a name the server would reject: fewer than three characters once incidental
+ * whitespace is collapsed, or a single word with no family name.
+ *
+ * The server matches the whole legal name against the bureau, so a single word is an incomplete
+ * form rather than an identity. Mirroring that rule here turns a round trip that would otherwise
+ * dead-end — the browser accepts the value, the server refuses it, and nothing on screen says
+ * why — into an inline hint before anything is sent. `required` covers the empty field, so an
+ * empty value passes to stay out of its way.
+ */
+export const fullNameValidator: ValidatorFn = (
+  control: AbstractControl,
+): ValidationErrors | null => {
+  const value = String(control.value ?? '')
+    .trim()
+    .replace(/\s+/g, ' ');
+
+  if (!value) {
+    return null;
+  }
+
+  if (value.length < FULL_NAME_MIN_LENGTH) {
+    return { nameTooShort: true };
+  }
+
+  if (!value.includes(' ')) {
+    return { nameIncomplete: true };
+  }
+
+  return null;
+};
 
 /** Rejects anything that is not a CPF whose verification digits check out. */
 export const cpfValidator: ValidatorFn = (control: AbstractControl): ValidationErrors | null => {

@@ -2,10 +2,11 @@ import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/cor
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { MessageKey, t } from '../../shared/i18n/messages';
-import { RejectionReason, SignupOutcome, SignupService } from './signup.service';
+import { RejectionReason, SignupOutcome, SignupService, SubmissionProblem } from './signup.service';
 import {
   adultBirthDateValidator,
   cpfValidator,
+  fullNameValidator,
   monthlyIncomeValidator,
   normalizeCpf,
   passwordValidator,
@@ -32,7 +33,8 @@ const REASON_MESSAGES: Record<RejectionReason, MessageKey> = {
 const FIELD_MESSAGES: Record<string, Record<string, MessageKey>> = {
   fullName: {
     required: 'signup.error.fullName.required',
-    minlength: 'signup.error.fullName.tooShort',
+    nameTooShort: 'signup.error.fullName.tooShort',
+    nameIncomplete: 'signup.error.fullName.incomplete',
   },
   cpf: { required: 'signup.error.cpf.required', cpf: 'signup.error.cpf.invalid' },
   email: { required: 'signup.error.email.required', email: 'signup.error.email.invalid' },
@@ -56,6 +58,18 @@ const FIELD_MESSAGES: Record<string, Record<string, MessageKey>> = {
 const HINTED_FIELDS = new Set(['cpf', 'password', 'birthDate', 'monthlyIncome']);
 
 /**
+ * Where the server's stable 422 codes belong on the form.
+ *
+ * A code this screen recognises paints its message onto the field that owns it, so a rejection
+ * the browser did not anticipate still points at the input to change. Anything unrecognised
+ * falls back to the server's own reason rather than being pinned to the wrong field.
+ */
+const FIELD_FOR_CODE: Record<string, { readonly field: string; readonly message: MessageKey }> = {
+  WEAK_PASSWORD: { field: 'password', message: 'signup.error.password.weak' },
+  UNDERAGE_CUSTOMER: { field: 'birthDate', message: 'signup.error.birthDate.underage' },
+};
+
+/**
  * The screen where a person applies to open an account.
  *
  * Every rule enforced here is also enforced on the server; checking twice is not redundancy
@@ -77,7 +91,7 @@ export class Signup {
   readonly t = t;
 
   readonly form = this.formBuilder.nonNullable.group({
-    fullName: ['', [Validators.required, Validators.minLength(2)]],
+    fullName: ['', [Validators.required, fullNameValidator]],
     cpf: ['', [Validators.required, cpfValidator]],
     email: ['', [Validators.required, Validators.email]],
     password: ['', [Validators.required, passwordValidator]],
@@ -233,14 +247,32 @@ export class Signup {
         return;
 
       case 'invalid':
-        this.serverErrors.set(outcome.fieldErrors);
         this.phase.set('form');
-        this.banner.set(t('signup.invalid'));
+        this.showSubmissionProblem(outcome.problem);
         return;
 
       default:
         this.phase.set('form');
         this.banner.set(t('signup.failed'));
     }
+  }
+
+  /**
+   * Surfaces a submission the server rejected but the form did not anticipate.
+   *
+   * A recognised code lands on its own field with a message this screen owns; anything else
+   * shows the reason the server gave. Either way the person is told what to change — the one
+   * outcome ruled out is the empty dead-end, a "review the details below" that highlights
+   * nothing because the response carried no per-field breakdown to read.
+   */
+  private showSubmissionProblem(problem: SubmissionProblem): void {
+    const mapped = problem.code ? FIELD_FOR_CODE[problem.code] : undefined;
+    if (mapped) {
+      this.serverErrors.set({ [mapped.field]: t(mapped.message) });
+      this.banner.set(t('signup.invalid'));
+      return;
+    }
+
+    this.banner.set(problem.detail ?? t('signup.failed'));
   }
 }
