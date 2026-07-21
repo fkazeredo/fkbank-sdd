@@ -30,7 +30,6 @@ internal pilot/pre-release (see the production definition in workflow-policy.yml
    - No ⇒ record `SECURITY_NOT_APPLICABLE` + justification in the release notes.
    - Yes + track not approved + `--production` ⇒ **BLOCKED** (production waits for the
      approved track). Yes + internal ⇒ continue when observations are Low/Medium, policy-bounded,
-     continue when observations are Low/Medium, policy-bounded, and have an owner and deadline;
      request one decision only for material residual risk. Never write SECURITY_VERIFIED without
      the track executed.
 3. Branch `release/x.y.z` → set version (`tools/release/set-version`) removing `-SNAPSHOT`
