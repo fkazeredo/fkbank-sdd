@@ -1,0 +1,11 @@
+{
+  "candidate_sha": "<git rev-parse HEAD>",
+  "commands": [
+    {"command": "tools/quality/verify-slice", "status": "pass", "evidence": "<report path or concise output>"}
+  ],
+  "acceptance_criteria": [
+    {"criterion": "<exact criterion>", "status": "pass", "evidence": "<executable test or probe>"}
+  ],
+  "skipped_mandatory_controls": [],
+  "known_limitations": []
+}

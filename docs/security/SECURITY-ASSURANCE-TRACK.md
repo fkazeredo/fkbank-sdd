@@ -39,8 +39,9 @@ authoritative. Until a wrapper exists for an applicable mandatory control, the v
 ## Finding policy
 
 - Critical or High unresolved: `BLOCKED`.
-- Medium/Low: owner, remediation deadline, exploitability, affected SHA, and release decision
-  are required.
+- Medium/Low: owner, remediation deadline, exploitability and affected SHA are required.
+  Policy-bounded observations may continue automatically for an internal candidate; only a
+  material product, financial, privacy, or exploitability decision requires owner acceptance.
 - False positive: reproducible disposition and reviewer evidence are required.
 - Manual penetration work: scope, authorization, tester, environment, timebox, evidence, and
   retest must be recorded when the threat model requires it.

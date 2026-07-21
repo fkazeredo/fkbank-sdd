@@ -33,6 +33,9 @@ R0/R1 do not use this skill (inline plan in /build).
    · Decision Ladder record · **Implementation-fit gate** (decision-ladder.md
    §Implementation-fit gate — the eight signals + classification rule): classify the slice
    `FIT` | `TOO_LARGE` | `HUMAN_DECISION_REQUIRED` and WRITE the verdict to `state.json.fit`.
+   Also write all detected signal numbers to `state.json.fit_signals` and the exceptional unsafe
+   condition, when present, to `state.json.fit_unsafe_condition`. The executable gate recomputes
+   the threshold from these fields; a bare self-declared `FIT` is invalid.
    A slice that does not fit the session is a slice problem, not a session problem: on
    `TOO_LARGE` propose the split BEFORE approval (never reach PLAN_APPROVED); genuinely
    ambiguous ⇒ `HUMAN_DECISION_REQUIRED`. A narrative claim ("no value when split") never

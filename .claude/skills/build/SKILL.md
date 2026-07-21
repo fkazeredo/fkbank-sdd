@@ -55,14 +55,15 @@ stays truthful (`.claude/rules/qa-ownership.md` §Bidirectional boundary).
    architecture, test discovery, packaging and affected integrations; a QA verdict issued
    before the change is invalidated.
 5. Finish: run `tools/quality/verify-slice` in full. Fill
-   `.claude/runtime/<id>/dev-verification.md` (template) — commands + results, AC →
+   `.claude/runtime/<id>/dev-verification.md` (human-readable report) and
+   `.claude/runtime/<id>/dev-verification.json` (machine-readable evidence, using the template) — commands + results, AC →
    evidence table (with the discriminating question answered per protection), tests created,
    checks skipped + why, deviations, limitations. Write the report factually
    (workflow-conventions.md §Reporting language): name any failed behavior, its evidence, root
    cause and missing prevention; do not dramatize or minimize.
 6. **Strict DEV_VERIFIED gate.** `DEV_VERIFIED` means a fully integrated, passing candidate —
    not a partial implementation awaiting QA. Write to `state.json`: `verify_slice`
-   (`pass`/`fail`), `e2e` (`pass`/`fail`/`not_applicable`), `acceptance_evidence`
+   (`pass`/`fail`), `e2e` (`pass`/`fail`/`not_applicable`), `e2e_applicable` (boolean), `acceptance_evidence`
    (`complete`/`incomplete`), and `candidate_sha` (the HEAD the evidence was produced against).
    Run `tools/workflow/check-slice-gate <id> dev-verified`; set `DEV_VERIFIED` only when it
    passes AND all nine hold: (1) `verify-slice` passes; (2) every mandatory check applicable to

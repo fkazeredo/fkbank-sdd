@@ -3,6 +3,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 TARGET="${1:-candidate}"; MODE="${2:-}"; EVIDENCE="$ROOT/.claude/runtime/security-$TARGET"
 mkdir -p "$EVIDENCE"; cd "$ROOT"; RESULTS=()
+RESULTS+=("candidate-sha=$(git -C "$ROOT" rev-parse HEAD)")
 
 # Scanners run as PINNED containers (tag + digest), never as build dependencies: decision-ladder
 # rung 8 forbids adding a dependency without owner approval, and the assurance track needs a
@@ -42,6 +43,14 @@ elif [ "$MODE" = "--requires-heavy" ]; then
   echo 'BLOCKED: gitleaks (local binary or Docker) is required for this candidate' >&2; exit 1
 else RESULTS+=("secrets=NOT_APPLICABLE(no gitleaks binary and no Docker)"); fi
 
+# Canonical digest-pinned dependency, license, configuration, container and IaC controls.
+if [ -x tools/security/supply-chain/trivy-scan.sh ]; then
+  timeout 3600 tools/security/supply-chain/trivy-scan.sh all
+  RESULTS+=("supply-chain-and-deployment=PASS")
+elif [ "$MODE" = "--requires-heavy" ]; then
+  echo 'BLOCKED: canonical Trivy supply-chain wrapper is missing or not executable' >&2; exit 1
+else RESULTS+=("supply-chain-and-deployment=NOT_APPLICABLE(no wrapper)"); fi
+
 # Backend. The Maven project lives at backend/pom.xml; probing the repo root made this control
 # report NOT_APPLICABLE(no backend) on a Java repo, silently skipping the entire build.
 BACKEND_DIR=""
@@ -78,4 +87,4 @@ elif [ "$MODE" = "--requires-heavy" ]; then
 else RESULTS+=("dynamic-security=NOT_APPLICABLE(no application)"); fi
 
 printf '%s\n' "${RESULTS[@]}" | tee "$EVIDENCE/controls.txt"
-echo 'verify-assurance: PASS'
+echo 'verify-assurance: AUTOMATED_CONTROLS_PASS (independent review is still required for a security verdict)'

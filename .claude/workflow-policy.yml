@@ -47,6 +47,7 @@ limits:                            # outcome bounds -- see .claude/rules/workflo
 
 slice_gates:                       # binding implementation gates (tools/workflow/check-slice-gate)
   fit_gate: binding                # TOO_LARGE / ambiguous never enters implementation
+  fit_evidence: detected signal ids plus exceptional unsafe-condition flag
   dev_verified_requires:
     - verify_slice_pass
     - applicable_e2e_pass
@@ -88,9 +89,9 @@ state_machine:
 security_gate:                     # final-delivery assurance policy
   track_document: docs/security/SECURITY-ASSURANCE-TRACK.md
   track_approved: true             # owner-approved 2026-07-17; execution evidence is still mandatory
-  applicability: release containing at least one R3/R4 slice
+  applicability: Sprint closure or release candidate containing at least one R3/R4 slice
   r0_r2_release: SECURITY_NOT_APPLICABLE with recorded justification
-  r3_r4_internal_release: approved track executes; SECURITY_OBSERVATIONS requires recorded human decision
+  r3_r4_internal_candidate: approved track executes; policy-bounded Low/Medium observations continue automatically; only material residual risk requires a human decision
   r3_r4_production_release: BLOCKED until the approved track executes with SECURITY_VERIFIED
   note: risk acceptance NEVER produces SECURITY_VERIFIED
   production_release_definition: >

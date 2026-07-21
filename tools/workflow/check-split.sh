@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Split completeness + provenance check (read-only). Exit 0 = pass, 2 = violation, 1 = usage/IO.
-# Mirrors check-split.ps1: (a) every acceptance-criterion line in the original appears verbatim
-# (trimmed) in at least one child, and (b) every child carries split_from pointing at the
+# Mirrors check-split.ps1: traceable lines in business rules, edge cases, failure modes, open
+# decisions, acceptance criteria and decision log must appear verbatim in a child.
 # original's id. Pure bash+grep (no python3). It never writes any file.
 set -uo pipefail
 
@@ -18,15 +18,18 @@ ORIG_ID="$(grep -oE '^id:[[:space:]]*SPEC-[0-9]{4}' "$ORIGINAL" | head -n1 | gre
 
 fail=0
 
-# (a) every acceptance-criterion line in the original appears (trimmed) in >=1 child
+# (a) every traceable line in the original appears (trimmed) in >=1 child
 CHILD_LINES="$(sed -E 's/^[[:space:]]*//; s/[[:space:]]*$//' "${CHILDREN[@]}")"
-while IFS= read -r ac; do
-  [ -n "$ac" ] || continue
-  if ! grep -Fxq -e "$ac" <<<"$CHILD_LINES"; then
-    echo "check-split: lost acceptance criterion: $ac" >&2
+while IFS= read -r trace; do
+  [ -n "$trace" ] || continue
+  if ! grep -Fxq -e "$trace" <<<"$CHILD_LINES"; then
+    echo "check-split: lost traceable spec content: $trace" >&2
     fail=2
   fi
-done < <(grep -E '^[[:space:]]*- \[[ xX]\]' "$ORIGINAL" | sed -E 's/^[[:space:]]*//; s/[[:space:]]*$//')
+done < <(awk '
+  /^## / { h=tolower($0); on=(h ~ /business rules|edge cases|failure modes|open decisions|open questions|open doubts|acceptance criteria|decision log/); next }
+  on && $0 !~ /^[[:space:]]*```/ && $0 ~ /[^[:space:]]/ { sub(/^[[:space:]]*/, ""); sub(/[[:space:]]*$/, ""); print }
+' "$ORIGINAL")
 
 # (b) every child carries split_from matching the original id
 for c in "${CHILDREN[@]}"; do

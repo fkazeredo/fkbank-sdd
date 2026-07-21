@@ -4,6 +4,8 @@ $root=(Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
 $evidence=Join-Path $root ".claude/runtime/security-$Target"
 New-Item -ItemType Directory -Force -Path $evidence|Out-Null
 $results=@()
+$candidateSha=([string](& git -C $root rev-parse HEAD)).Trim()
+$results+="candidate-sha=$candidateSha"
 # The exit code is what an automated gate reads, and this script used to have no `exit` at all:
 # it leaned on PowerShell's implicit code, which the DAST teardown below then overwrote with 0.
 # A run whose controls.txt said `dynamic-security=FAIL` still handed the caller a success. Track
@@ -62,6 +64,13 @@ try{
   }elseif($RequiresHeavy){throw 'BLOCKED: gitleaks (local binary or Docker) is required for this candidate'}
   else{$results+='secrets=NOT_APPLICABLE(no gitleaks binary and no Docker)'}
 
+  # Dependencies, licenses, repository configuration, Docker/Compose and built images use the
+  # same digest-pinned Trivy wrapper as CI. Heavy assurance may never silently omit this family.
+  $bash=Get-Command bash -ErrorAction SilentlyContinue
+  if($bash){ Run-Control 'supply-chain-and-deployment' { & bash tools/security/supply-chain/trivy-scan.sh all } }
+  elseif($RequiresHeavy){throw 'BLOCKED: bash is required to run the canonical Trivy supply-chain wrapper'}
+  else{$results+='supply-chain-and-deployment=NOT_APPLICABLE(no bash)'}
+
   # Backend. The Maven project lives at backend/pom.xml; probing the repo root made this control
   # report NOT_APPLICABLE(no backend) on a Java repo, silently skipping the entire build.
   $backendDir=$null
@@ -116,6 +125,6 @@ try{
 # Re-read the recorded results rather than trusting the flag alone: whatever a caller acts on
 # must be the same thing an auditor reads in controls.txt.
 if(@($results|Where-Object{$_ -like '*FAIL*'}).Count -gt 0){$hadFailure=$true}
-if($hadFailure){Write-Host 'verify-assurance: FAIL';exit 1}
-Write-Host 'verify-assurance: PASS'
+if($hadFailure){Write-Host 'verify-assurance: AUTOMATED_CONTROLS_FAIL';exit 1}
+Write-Host 'verify-assurance: AUTOMATED_CONTROLS_PASS (independent review is still required for a security verdict)'
 exit 0

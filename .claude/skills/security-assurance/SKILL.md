@@ -37,13 +37,17 @@ recorded. Otherwise end `BLOCKED` without claiming assurance.
 Canonical entry point: `tools/security/verify-assurance.ps1 -Target <target> -RequiresHeavy`
 on Windows or `tools/security/verify-assurance.sh <target> --requires-heavy` on POSIX. A
 missing mandatory pinned tool/profile returns `BLOCKED`; never downgrade it to a warning.
+Its success means only `AUTOMATED_CONTROLS_PASS`. Before issuing a verdict, the independent worker
+must record all eight mandatory control families, with evidence and the exact SHA, in the durable
+report. Missing, stale, or merely asserted evidence is `BLOCKED`.
 
 ## Verdict
 
 - `SECURITY_VERIFIED`: every mandatory applicable control ran and no unresolved High/Critical
   finding remains.
-- `SECURITY_OBSERVATIONS`: only when policy permits a non-production candidate and every
-  unresolved item has an owner and deadline; requires explicit owner risk decision.
+- `SECURITY_OBSERVATIONS`: when policy permits a non-production candidate and every unresolved
+  item has an owner and deadline. Policy-bounded Low/Medium observations continue automatically;
+  material product, financial, privacy, or exploitability risk requires an explicit owner decision.
 - `BLOCKED`: track not approved, environment unavailable, mandatory control skipped, evidence
   incomplete, or unresolved High/Critical finding.
 

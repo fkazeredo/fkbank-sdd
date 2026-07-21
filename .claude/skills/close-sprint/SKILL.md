@@ -96,14 +96,20 @@ security checks each `/deliver-spec` already ran; it is never a mechanical repea
 ask the operator to approve security execution. Because the heavy wrapper outlasts a subagent, the orchestrator runs
 `tools/security/verify-assurance.ps1 -Target <candidate> -RequiresHeavy` (or the `.sh`) to
 completion itself, then the independent `security-assurance-engineer` worker judges the produced
-evidence and issues the verdict — orchestration never declares its own security verdict. Reuse a
+automated evidence, performs and records the threat-model, authorization/isolation, endpoint,
+header, abuse-case and risk-specific manual families, and issues the verdict — wrapper success is
+only `AUTOMATED_CONTROLS_PASS`, never a security verdict. The report must enumerate all eight
+mandatory families from `docs/security/SECURITY-ASSURANCE-TRACK.md`, their status/evidence, and the
+exact candidate SHA; a missing family is `BLOCKED`. Reuse a
 complete-track verdict only when it belongs to the exact candidate SHA.
 
 - `SECURITY_VERIFIED` or `SECURITY_NOT_APPLICABLE` ⇒ continue.
-- `SECURITY_OBSERVATIONS` ⇒ allowed only with the recorded owner risk decision for the exact
-  candidate; carry the still-relevant observations over.
-- Any open High/Critical finding, `BLOCKED`, or a `SECURITY_OBSERVATIONS` without a recorded owner
-  decision ⇒ the Sprint is not cleanly closed ⇒ `SPRINT_INCOMPLETE`.
+- `SECURITY_OBSERVATIONS` ⇒ continue automatically when every observation is Low/Medium, bounded
+  by the approved policy, has an owner and deadline, and does not require accepting a material
+  product, financial, privacy, or exploitability risk. Only that material residual risk requires
+  one owner risk decision for the exact candidate.
+- Any open High/Critical finding, `BLOCKED`, or a policy-bounded observation without an owner and
+  deadline ⇒ the Sprint is not cleanly closed ⇒ `SPRINT_INCOMPLETE`.
 - A genuinely unresolved risk-acceptance decision needed to claim the Sprint Goal ⇒ one consolidated
   Human Decision Request.
 
@@ -112,9 +118,11 @@ actually executed.
 
 ## Auto-fix (within scope only)
 
-When the battery surfaces a defect within the Sprint's delivered scope, apply the single automatic
-correction cycle the policy allows (`.claude/workflow-policy.yml` limits), commit it on a work
-branch, and re-run only the affected controls — not the whole battery. A fix that would add
+When the battery surfaces a defect within the Sprint's delivered scope, read and increment
+`.claude/runtime/<sprint>/close-state.json:correction_cycles`. If it is already `1`, do not modify
+the code again: record the defect as carry-over and end `SPRINT_INCOMPLETE`. Otherwise apply the
+single automatic correction cycle the policy allows (`.claude/workflow-policy.yml` limits), persist
+the increment before re-running only the affected controls — not the whole battery. A fix that would add
 behavior, cross a bounded context, change a public contract, need a new dependency, or exceed the
 correction budget is out of scope: stop with a Human Decision Request, or record it as carry-over
 and `SPRINT_INCOMPLETE`. Every fix is verified before it counts; a bug fix begins with a failing
@@ -159,9 +167,9 @@ to invoke `/release`, `/security-assurance`, `/reconcile-workflow`, `/workflow-s
 
 Reconciling a merged spec, bringing up the integrated candidate, reusing or running verification and
 the Security Assurance track, auto-fixing an in-scope defect, updating the Roadmap, drafting the
-release notes, creating the closure commit, pushing a non-protected work branch, and opening a Pull
-Request when repository protection makes one necessary are all ordinary autonomous execution — never
-a confirmation gate.
+release notes, and creating the local closure commit are ordinary autonomous execution. Pushing a
+branch or opening a Pull Request is optional repository housekeeping and is never required to claim
+the Sprint closure verdict.
 
 ## Terminal states and resume
 

@@ -7,7 +7,16 @@ expect(){ local name="$1" want="$2";shift 2; local start=$SECONDS; echo "START $
 # Write a frontmatter-complete fixture spec ($dir/<id>-fixture.md); args after $sf are acceptance criteria.
 mkspec(){ local dir="$1" id="$2" dep="$3" sf="$4"; shift 4; { echo '---'; echo "id: $id"; echo "title: Fixture $id"; echo 'status: DRAFT'; echo 'risk: R1'; echo 'profile: light'; echo 'modules: []'; echo "depends_on: $dep"; echo 'relevant_adrs: []'; echo 'reading_list:'; echo '  domain: []'; echo '  architecture: []'; echo 'planned_sprint: null'; echo 'planned_release: null'; echo 'owner_approved_at: null'; echo 'owner_approved_hash: null'; [ -z "$sf" ] || echo "split_from: $sf"; echo '---'; echo; echo "# $id - Fixture"; echo; echo '## Business rules'; echo '- BR-1 - fixture rule.'; echo; echo '## Acceptance criteria'; for ac in "$@"; do echo "- [ ] $ac"; done; echo; echo '## Decision log'; echo '- DL-0001 - 2026-07-20 - fixture - decided by policy'; } > "$dir/$id-fixture.md"; }
 # Materialize the gitignored gate fixture at the real root (check-slice-gate needs a resolvable HEAD).
-mk99(){ mkdir -p "$ROOT/.claude/runtime/SPEC-0099"; printf '%s' "$1" > "$ROOT/.claude/runtime/SPEC-0099/state.json"; printf 'fixture' > "$ROOT/.claude/runtime/SPEC-0099/dev-verification.md"; }
+mk99(){
+  mkdir -p "$ROOT/.claude/runtime/SPEC-0099"
+  python3 - "$1" "$ROOT/.claude/runtime/SPEC-0099/state.json" <<'PY'
+import json,sys
+s=json.loads(sys.argv[1]); s.setdefault('fit_signals',[1]); s.setdefault('fit_unsafe_condition',False); s.setdefault('execution_mode','sequential'); s.setdefault('e2e_applicable',s.get('e2e')!='not_applicable')
+open(sys.argv[2],'w',encoding='utf-8').write(json.dumps(s,separators=(',',':')))
+PY
+  printf 'fixture report' > "$ROOT/.claude/runtime/SPEC-0099/dev-verification.md"
+  printf '{"candidate_sha":"%s","commands":[{"command":"tools/quality/verify-slice","status":"pass","evidence":"exit 0"}],"acceptance_criteria":[{"criterion":"fixture","status":"pass","evidence":"FixtureIT"}],"skipped_mandatory_controls":[],"known_limitations":[]}' "$(git -C "$ROOT" rev-parse HEAD)" > "$ROOT/.claude/runtime/SPEC-0099/dev-verification.json"
+}
 GATE="$ROOT/tools/workflow/check-slice-gate.sh"; SPLIT="$ROOT/tools/workflow/check-split.sh"; SPECS="$ROOT/tools/workflow/validate-specs.sh"
 ACA='returns 200 on the happy path'; ACB='returns CONFLICT on a duplicate request'; ACG='replaying the request is idempotent'
 
@@ -26,33 +35,34 @@ run close-sprint-closure-gate python3 -c 'import sys,pathlib; r=pathlib.Path(sys
 
 HEAD="$(git -C "$ROOT" rev-parse HEAD)"
 # (1)(2) fit gate reads state.json.fit.
-mk99 "{\"slice\":\"SPEC-0099\",\"status\":\"DEV_VERIFIED\",\"fit\":\"FIT\",\"verify_slice\":\"pass\",\"e2e\":\"pass\",\"acceptance_evidence\":\"complete\",\"candidate_sha\":\"$HEAD\"}"
+STATE_GREEN="\"slice\":\"SPEC-0099\",\"status\":\"DEV_VERIFIED\",\"fit\":\"FIT\",\"fit_signals\":[1],\"fit_unsafe_condition\":false,\"execution_mode\":\"sequential\",\"verify_slice\":\"pass\",\"e2e\":\"pass\",\"e2e_applicable\":true,\"acceptance_evidence\":\"complete\",\"candidate_sha\":\"$HEAD\""
+mk99 "{$STATE_GREEN}"
 expect 'gate fit FIT' 0 bash "$GATE" 0099 fit
-mk99 "{\"slice\":\"SPEC-0099\",\"status\":\"DEV_VERIFIED\",\"fit\":\"TOO_LARGE\",\"verify_slice\":\"pass\",\"e2e\":\"pass\",\"acceptance_evidence\":\"complete\",\"candidate_sha\":\"$HEAD\"}"
+mk99 "{${STATE_GREEN/\"fit\":\"FIT\"/\"fit\":\"TOO_LARGE\"}}"
 expect 'gate fit TOO_LARGE' 2 bash "$GATE" 0099 fit
 # (8) dev-verified gate: all signals green passes; a failed verify-slice is blocked.
-mk99 "{\"slice\":\"SPEC-0099\",\"status\":\"DEV_VERIFIED\",\"fit\":\"FIT\",\"verify_slice\":\"pass\",\"e2e\":\"pass\",\"acceptance_evidence\":\"complete\",\"candidate_sha\":\"$HEAD\"}"
+mk99 "{\"slice\":\"SPEC-0099\",\"status\":\"DEV_VERIFIED\",\"fit\":\"FIT\",\"fit_signals\":[1],\"fit_unsafe_condition\":false,\"execution_mode\":\"sequential\",\"verify_slice\":\"pass\",\"e2e\":\"pass\",\"e2e_applicable\":true,\"acceptance_evidence\":\"complete\",\"candidate_sha\":\"$HEAD\"}"
 expect 'gate dev-verified green' 0 bash "$GATE" 0099 dev-verified
-mk99 "{\"slice\":\"SPEC-0099\",\"status\":\"DEV_VERIFIED\",\"fit\":\"FIT\",\"verify_slice\":\"fail\",\"e2e\":\"pass\",\"acceptance_evidence\":\"complete\",\"candidate_sha\":\"$HEAD\"}"
+mk99 "{\"slice\":\"SPEC-0099\",\"status\":\"DEV_VERIFIED\",\"fit\":\"FIT\",\"fit_signals\":[1],\"fit_unsafe_condition\":false,\"execution_mode\":\"sequential\",\"verify_slice\":\"fail\",\"e2e\":\"pass\",\"e2e_applicable\":true,\"acceptance_evidence\":\"complete\",\"candidate_sha\":\"$HEAD\"}"
 expect 'gate dev-verified verify-slice fail' 2 bash "$GATE" 0099 dev-verified
 # (9) dev-verified gate blocks a failed E2E.
-mk99 "{\"slice\":\"SPEC-0099\",\"status\":\"DEV_VERIFIED\",\"fit\":\"FIT\",\"verify_slice\":\"pass\",\"e2e\":\"fail\",\"acceptance_evidence\":\"complete\",\"candidate_sha\":\"$HEAD\"}"
+mk99 "{\"slice\":\"SPEC-0099\",\"status\":\"DEV_VERIFIED\",\"fit\":\"FIT\",\"fit_signals\":[1],\"fit_unsafe_condition\":false,\"execution_mode\":\"sequential\",\"verify_slice\":\"pass\",\"e2e\":\"fail\",\"e2e_applicable\":true,\"acceptance_evidence\":\"complete\",\"candidate_sha\":\"$HEAD\"}"
 expect 'gate dev-verified e2e fail' 2 bash "$GATE" 0099 dev-verified
 # (11) qa-preflight passes on fresh DEV_VERIFIED evidence; a stale candidate SHA is blocked.
-mk99 "{\"slice\":\"SPEC-0099\",\"status\":\"DEV_VERIFIED\",\"fit\":\"FIT\",\"verify_slice\":\"pass\",\"e2e\":\"pass\",\"acceptance_evidence\":\"complete\",\"candidate_sha\":\"$HEAD\"}"
+mk99 "{\"slice\":\"SPEC-0099\",\"status\":\"DEV_VERIFIED\",\"fit\":\"FIT\",\"fit_signals\":[1],\"fit_unsafe_condition\":false,\"execution_mode\":\"sequential\",\"verify_slice\":\"pass\",\"e2e\":\"pass\",\"e2e_applicable\":true,\"acceptance_evidence\":\"complete\",\"candidate_sha\":\"$HEAD\"}"
 expect 'gate qa-preflight fresh' 0 bash "$GATE" 0099 qa-preflight
-mk99 "{\"slice\":\"SPEC-0099\",\"status\":\"DEV_VERIFIED\",\"fit\":\"FIT\",\"verify_slice\":\"pass\",\"e2e\":\"pass\",\"acceptance_evidence\":\"complete\",\"candidate_sha\":\"0000000000000000000000000000000000000000\"}"
+mk99 "{\"slice\":\"SPEC-0099\",\"status\":\"DEV_VERIFIED\",\"fit\":\"FIT\",\"fit_signals\":[1],\"fit_unsafe_condition\":false,\"execution_mode\":\"sequential\",\"verify_slice\":\"pass\",\"e2e\":\"pass\",\"e2e_applicable\":true,\"acceptance_evidence\":\"complete\",\"candidate_sha\":\"0000000000000000000000000000000000000000\"}"
 expect 'gate qa-preflight stale' 2 bash "$GATE" 0099 qa-preflight
 # (10) qa-preflight must not mutate state.json on the failing slice.
 echo "START gate qa-preflight read-only"
-mk99 "{\"slice\":\"SPEC-0099\",\"status\":\"DEV_VERIFIED\",\"fit\":\"FIT\",\"verify_slice\":\"pass\",\"e2e\":\"pass\",\"acceptance_evidence\":\"complete\",\"candidate_sha\":\"0000000000000000000000000000000000000000\"}"
+mk99 "{\"slice\":\"SPEC-0099\",\"status\":\"DEV_VERIFIED\",\"fit\":\"FIT\",\"fit_signals\":[1],\"fit_unsafe_condition\":false,\"execution_mode\":\"sequential\",\"verify_slice\":\"pass\",\"e2e\":\"pass\",\"e2e_applicable\":true,\"acceptance_evidence\":\"complete\",\"candidate_sha\":\"0000000000000000000000000000000000000000\"}"
 cp "$ROOT/.claude/runtime/SPEC-0099/state.json" "$RUN/pre99"
 pf=0; bash "$GATE" 0099 qa-preflight >/dev/null 2>&1 || pf=$?
 [ "$pf" = 2 ] || { echo "FAIL  gate qa-preflight read-only: expected exit 2, got $pf" >&2; exit 1; }
 cmp -s "$RUN/pre99" "$ROOT/.claude/runtime/SPEC-0099/state.json" || { echo "FAIL  gate qa-preflight read-only: state.json was mutated" >&2; exit 1; }
 echo "PASS  gate qa-preflight read-only"
 # (14) parallel gate: disjoint ownership passes, overlap is blocked unless serialized.
-mk99 "{\"slice\":\"SPEC-0099\",\"status\":\"DEV_VERIFIED\",\"fit\":\"FIT\",\"verify_slice\":\"pass\",\"e2e\":\"pass\",\"acceptance_evidence\":\"complete\",\"candidate_sha\":\"$HEAD\"}"
+mk99 "{\"slice\":\"SPEC-0099\",\"status\":\"DEV_VERIFIED\",\"fit\":\"FIT\",\"fit_signals\":[1],\"fit_unsafe_condition\":false,\"execution_mode\":\"sequential\",\"verify_slice\":\"pass\",\"e2e\":\"pass\",\"e2e_applicable\":true,\"acceptance_evidence\":\"complete\",\"candidate_sha\":\"$HEAD\"}"
 printf '%s' '{"integrator":"ws-a","serialize":false,"workstreams":[{"id":"ws-a","paths":["backend/a/**"]},{"id":"ws-b","paths":["backend/b/**"]}]}' > "$ROOT/.claude/runtime/SPEC-0099/parallel-plan.json"
 expect 'gate parallel disjoint' 0 bash "$GATE" 0099 parallel
 printf '%s' '{"integrator":"ws-a","serialize":false,"workstreams":[{"id":"ws-a","paths":["backend/shared/**"]},{"id":"ws-b","paths":["backend/shared/**"]}]}' > "$ROOT/.claude/runtime/SPEC-0099/parallel-plan.json"

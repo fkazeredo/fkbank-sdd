@@ -1,6 +1,7 @@
 # Split completeness + provenance check (read-only). Exit 0 = pass, 2 = violation, 1 = usage/IO.
-# Proves a spec split lost nothing: (a) every acceptance-criterion line in the original appears
-# verbatim (trimmed) in at least one child, and (b) every child carries split_from pointing at the
+# Proves a spec split lost nothing: (a) every traceable line from business rules, edge cases,
+# failure modes, open decisions, acceptance criteria and decision log appears verbatim in a child,
+# and (b) every child carries split_from pointing at the
 # original's id. It never writes any file.
 param([string]$Original, [Parameter(ValueFromRemainingArguments = $true)][string[]]$Children)
 $ErrorActionPreference = 'SilentlyContinue'
@@ -23,9 +24,10 @@ $origText = Get-Content -LiteralPath $Original -Raw
 $origId = ([regex]::Match($origText, '(?m)^id:\s*(SPEC-\d{4})\s*$')).Groups[1].Value
 if (-not $origId) { Deny-Usage "cannot determine original id in $Original" }
 
-$acLines = @()
+$traceLines = @(); $capture=$false
 foreach ($line in ($origText -split "\r?\n")) {
-  if ($line -match '^\s*- \[[ xX]\]') { $acLines += $line.Trim() }
+  if ($line -match '^##\s+(.+)$') { $capture = $Matches[1] -match '(?i)business rules|edge cases|failure modes|open (decisions|questions|doubts)|acceptance criteria|decision log'; continue }
+  if ($capture -and $line.Trim() -and $line.Trim() -notmatch '^```') { $traceLines += $line.Trim() }
 }
 
 $childTrimmed = New-Object 'System.Collections.Generic.HashSet[string]'
@@ -38,8 +40,8 @@ foreach ($c in $Children) {
 }
 
 $violations = @()
-foreach ($ac in $acLines) {
-  if (-not $childTrimmed.Contains($ac)) { $violations += "lost acceptance criterion: $ac" }
+foreach ($trace in $traceLines) {
+  if (-not $childTrimmed.Contains($trace)) { $violations += "lost traceable spec content: $trace" }
 }
 foreach ($c in $Children) {
   $sf = ([regex]::Match($childText[$c], '(?m)^split_from:\s*(SPEC-\d{4})\s*$')).Groups[1].Value
@@ -47,5 +49,5 @@ foreach ($c in $Children) {
 }
 
 if ($violations.Count) { $violations | ForEach-Object { [Console]::Error.WriteLine("check-split: $_") }; exit 2 }
-"check-split: PASS ($($Children.Count) children, $($acLines.Count) criteria)"
+"check-split: PASS ($($Children.Count) children, $($traceLines.Count) traceable lines)"
 exit 0

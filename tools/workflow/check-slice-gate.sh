@@ -25,10 +25,15 @@ SID="SPEC-$N"
 DIR="$ROOT/.claude/runtime/$SID"
 STATE="$DIR/state.json"
 
-# --- parallel: reads parallel-plan.json, not state.json (absent plan => sequential => safe) ---
+# --- parallel: absent plan is safe only with an explicit sequential declaration ---
 if [ "$GATE" = parallel ]; then
   PLAN="$DIR/parallel-plan.json"
-  [ -f "$PLAN" ] || exit 0
+  if [ ! -f "$PLAN" ]; then
+    [ -f "$STATE" ] || usage "missing state.json for $SID"
+    grep -Eq '"execution_mode"[[:space:]]*:[[:space:]]*"sequential"' "$STATE" && exit 0
+    echo 'check-slice-gate: execution_mode must be sequential or parallel-plan.json must exist' >&2
+    exit 2
+  fi
   command -v python3 >/dev/null 2>&1 || { echo 'check-slice-gate: python3 is required to validate parallel-plan.json.' >&2; exit 1; }
   python3 - "$PLAN" <<'PY'
 import json, sys
@@ -101,6 +106,18 @@ FIT="$(field fit)"; VERIFY="$(field verify_slice)"; ACCEPT="$(field acceptance_e
 E2E="$(field e2e)"; CSHA="$(field candidate_sha)"; STATUS="$(field status)"
 
 if [ "$GATE" = fit ]; then
+  command -v python3 >/dev/null 2>&1 || usage 'python3 is required to validate fit evidence'
+  python3 - "$STATE" <<'PY'
+import json, sys
+try: s=json.load(open(sys.argv[1], encoding='utf-8'))
+except Exception as e: print(f'check-slice-gate: invalid state.json: {e}', file=sys.stderr); sys.exit(1)
+signals=s.get('fit_signals')
+if not isinstance(signals,list) or any(type(x) is not int or x < 1 or x > 8 for x in signals) or len(signals)!=len(set(signals)):
+ print('check-slice-gate: fit_signals must contain unique integers 1..8', file=sys.stderr); sys.exit(2)
+if s.get('fit')=='FIT' and (len(signals)>=3 or s.get('fit_unsafe_condition') is True):
+ print('check-slice-gate: declared FIT conflicts with detected signals/unsafe condition', file=sys.stderr); sys.exit(2)
+PY
+  rc=$?; [ "$rc" = 0 ] || exit "$rc"
   case "$FIT" in
     FIT) exit 0 ;;
     TOO_LARGE) echo 'check-slice-gate: fit=TOO_LARGE => split required.' >&2; exit 2 ;;
@@ -126,6 +143,25 @@ else
   fi
 fi
 [ -f "$DIR/dev-verification.md" ] || note 'dev-verification.md is missing'
+[ -f "$DIR/dev-verification.json" ] || note 'dev-verification.json is missing'
+if [ -f "$DIR/dev-verification.json" ]; then
+  command -v python3 >/dev/null 2>&1 || usage 'python3 is required to validate dev-verification.json'
+  python3 - "$DIR/dev-verification.json" "$CSHA" <<'PY' || fail=2
+import json,sys
+try: e=json.load(open(sys.argv[1],encoding='utf-8'))
+except Exception as x: print(f'check-slice-gate: invalid dev-verification.json: {x}',file=sys.stderr);sys.exit(2)
+bad=[]
+if e.get('candidate_sha') != sys.argv[2]: bad.append('evidence candidate_sha mismatch')
+cmd=e.get('commands') or []
+if not cmd or any(not x.get('command') or x.get('status')!='pass' or not x.get('evidence') for x in cmd): bad.append('commands require command/status=pass/evidence')
+acs=e.get('acceptance_criteria') or []
+if not acs or any(not x.get('criterion') or x.get('status')!='pass' or not x.get('evidence') for x in acs): bad.append('acceptance criteria require criterion/status=pass/evidence')
+if e.get('skipped_mandatory_controls'): bad.append('mandatory controls were skipped')
+for x in bad: print('check-slice-gate: '+x,file=sys.stderr)
+sys.exit(2 if bad else 0)
+PY
+fi
+if [ "$E2E" = not_applicable ] && ! grep -Eq '"e2e_applicable"[[:space:]]*:[[:space:]]*false' "$STATE"; then note 'e2e=not_applicable requires e2e_applicable=false'; fi
 
 if [ "$GATE" = qa-preflight ]; then
   [ "$STATUS" = DEV_VERIFIED ] || note "status is '$STATUS' (must be DEV_VERIFIED)"

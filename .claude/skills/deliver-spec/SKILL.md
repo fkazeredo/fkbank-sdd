@@ -37,7 +37,8 @@ Use `tools/workflow/spec-hash.ps1` or `.sh`; never reproduce the algorithm ad ho
    `owner_approved_at`/`owner_approved_hash` and the new slice's `docs/ROADMAP.md` sprint row
    `Started`), and set `READY`.
 2. R0/R1: create an inline plan and classify implementation-fit inline (decision-ladder.md
-   §Implementation-fit gate), writing `state.json.fit`; R2+: execute the `/design-slice`
+   §Implementation-fit gate), writing `state.json.fit`, `state.json.fit_signals` (the detected
+   signal numbers 1..8), and `state.json.fit_unsafe_condition` (boolean); R2+: execute the `/design-slice`
    contract, which classifies fit and writes it. A plan strictly derived from the approved spec
    may record owner approval from this command; a material choice still requires a separate
    Human Decision Request. Do not execute `/build` yet — the fit gate (step 3) is binding.
@@ -83,16 +84,18 @@ silent scope loss, no invented behavior.
 Ask EXACTLY ONE question: "Do you want me to apply this split?"
 - **Decline** ⇒ leave all files unchanged; do not implement the oversized spec; end at
   `HUMAN_DECISION_REQUIRED`; recommend refining the split or narrowing the original.
-- **Approve** ⇒ ONE atomic documentation transformation: (1) create all child spec files;
+- **Approve** ⇒ ONE atomic documentation transformation: (1) preserve the original file until the
+  split completeness check has passed; (2) create all child spec files;
   (2) add ONLY `split_from: SPEC-<original-id>` to each child's frontmatter — no other new field;
   (3) move the original rules/edge cases/decisions/acceptance criteria into the appropriate
   children; (4) redirect every affected `depends_on`; (5) replace the original executable Roadmap
   row with the child rows; (6) preserve the original capability name in ONE short Roadmap group
-  comment, e.g. `<!-- Split from SPEC-0002: Sign-up and account opening -->`; (7) delete the
-  original spec file; (8) run `tools/workflow/validate-specs`, `tools/workflow/check-split`
-  (proves no acceptance criterion was lost), `tools/workflow/validate-doc-language`, and the
-  workflow smoke tests; (9) if any validation fails, repair the transformation before reporting
-  success; (10) STOP after successful validation — do NOT begin implementing the first child.
+  comment, e.g. `<!-- Split from SPEC-0002: Sign-up and account opening -->`; (7) run
+  `tools/workflow/check-split` while the original still exists; (8) only after that check passes,
+  delete the original; (9) run `tools/workflow/validate-specs`,
+  `tools/workflow/validate-doc-language`, and the workflow smoke tests against the final tree;
+  (10) if any validation fails, restore/repair the transformation before reporting success;
+  (11) STOP after successful validation — do NOT begin implementing the first child.
 
 Do NOT introduce: a SPLIT lifecycle state; a permanent split matrix; a split manifest; a
 split-specific content hash; an archive copy of the deleted spec; a split report; an extra

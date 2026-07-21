@@ -23,7 +23,16 @@ $dir = Join-Path (Join-Path $root '.claude/runtime') $sid
 # --- parallel: reads parallel-plan.json, not state.json (absent plan => sequential => safe) ---
 if ($Gate -eq 'parallel') {
   $planPath = Join-Path $dir 'parallel-plan.json'
-  if (-not (Test-Path -LiteralPath $planPath)) { exit 0 }
+  if (-not (Test-Path -LiteralPath $planPath)) {
+    # Absence is safe only when the orchestrator explicitly records sequential execution.
+    $statePath = Join-Path $dir 'state.json'
+    if (-not (Test-Path -LiteralPath $statePath)) { Deny-Usage "missing state.json for $sid" }
+    try { $parallelState = Get-Content -LiteralPath $statePath -Raw | ConvertFrom-Json }
+    catch { Deny-Usage "invalid JSON in $statePath" }
+    if ([string]$parallelState.execution_mode -eq 'sequential') { exit 0 }
+    [Console]::Error.WriteLine('check-slice-gate: execution_mode must be sequential or parallel-plan.json must exist')
+    exit 2
+  }
   try { $plan = Get-Content -LiteralPath $planPath -Raw | ConvertFrom-Json }
   catch { Deny-Usage "invalid JSON in $planPath" }
 
@@ -103,7 +112,18 @@ catch { [Console]::Error.WriteLine("check-slice-gate: invalid state.json for $si
 
 if ($Gate -eq 'fit') {
   $fit = [string]$state.fit
-  if ($fit -eq 'FIT') { exit 0 }
+  if ('fit_signals' -notin @($state.PSObject.Properties.Name) -or 'fit_unsafe_condition' -notin @($state.PSObject.Properties.Name)) {
+    [Console]::Error.WriteLine('check-slice-gate: fit_signals and fit_unsafe_condition are required'); exit 2
+  }
+  $signals = @($state.fit_signals | Where-Object { $_ -ne $null })
+  $invalidSignals = @($signals | Where-Object { ([string]$_) -notmatch '^[1-8]$' })
+  if ($invalidSignals.Count) { [Console]::Error.WriteLine('check-slice-gate: fit_signals must contain only unique integers 1..8'); exit 2 }
+  if (@($signals | Select-Object -Unique).Count -ne $signals.Count) { [Console]::Error.WriteLine('check-slice-gate: fit_signals contains duplicates'); exit 2 }
+  $unsafe = $state.fit_unsafe_condition -eq $true
+  if ($fit -eq 'FIT') {
+    if ($signals.Count -ge 3 -or $unsafe) { [Console]::Error.WriteLine("check-slice-gate: declared FIT conflicts with $($signals.Count) signal(s) / unsafe=$unsafe"); exit 2 }
+    exit 0
+  }
   $reason = switch ($fit) {
     'TOO_LARGE' { 'fit=TOO_LARGE => split required' }
     'HUMAN_DECISION_REQUIRED' { 'fit=HUMAN_DECISION_REQUIRED => owner decision' }
@@ -129,6 +149,28 @@ if (-not $csha) {
   elseif ($csha -ne $head) { $failures += "candidate_sha '$csha' does not match current HEAD '$head'" }
 }
 if (-not (Test-Path -LiteralPath (Join-Path $dir 'dev-verification.md'))) { $failures += 'dev-verification.md is missing' }
+$evidencePath = Join-Path $dir 'dev-verification.json'
+if (-not (Test-Path -LiteralPath $evidencePath)) {
+  $failures += 'dev-verification.json is missing'
+} else {
+  try { $evidence = Get-Content -LiteralPath $evidencePath -Raw | ConvertFrom-Json }
+  catch { $failures += 'dev-verification.json is invalid'; $evidence = $null }
+  if ($evidence) {
+    if ([string]$evidence.candidate_sha -ne $csha) { $failures += 'dev-verification.json candidate_sha does not match state.json' }
+    $commands = @($evidence.commands | Where-Object { $_ })
+    if ($commands.Count -eq 0) { $failures += 'no executed commands recorded' }
+    foreach ($cmd in $commands) {
+      if (-not [string]$cmd.command -or [string]$cmd.status -ne 'pass' -or -not [string]$cmd.evidence) { $failures += 'every command requires command, status=pass, and evidence' }
+    }
+    $criteria = @($evidence.acceptance_criteria | Where-Object { $_ })
+    if ($criteria.Count -eq 0) { $failures += 'no acceptance-criterion evidence recorded' }
+    foreach ($criterion in $criteria) {
+      if (-not [string]$criterion.criterion -or [string]$criterion.status -ne 'pass' -or -not [string]$criterion.evidence) { $failures += 'every acceptance criterion requires criterion, status=pass, and executable evidence' }
+    }
+    if (@($evidence.skipped_mandatory_controls | Where-Object { $_ }).Count -gt 0) { $failures += 'mandatory controls were skipped' }
+  }
+}
+if ([string]$state.e2e -eq 'not_applicable' -and $state.e2e_applicable -ne $false) { $failures += 'e2e=not_applicable requires e2e_applicable=false' }
 
 if ($Gate -eq 'qa-preflight') {
   if ([string]$state.status -ne 'DEV_VERIFIED') { $failures += "status is '$([string]$state.status)' (must be DEV_VERIFIED)" }

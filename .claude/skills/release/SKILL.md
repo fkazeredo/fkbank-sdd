@@ -37,14 +37,14 @@ internal pilot/pre-release (see the production definition in workflow-policy.yml
    above; history never deleted) → narrative release note in `docs/release-notes/` →
    `tools/quality/verify-release` → PR `release/x.y.z → main` → state `AWAITING_MAIN_MERGE`.
 
-## Finalize (after the HUMAN merge to main)
-Confirm PR merged + CI green on the exact SHA → start `release-finalize` with an explicit
-allow-list manifest → annotated tag `vx.y.z` (only here — never
-before the human merge) → push the tag → GitHub Release with the note → branch
-`chore/post-release-x.y.z` from main → bump to next `-SNAPSHOT` → **sync PR to develop**
-(never a direct back-merge — develop is protected) → state `AWAITING_DEVELOP_SYNC_MERGE`.
+## Finalize assistance (after the HUMAN merge to main)
+Confirm the owner-reported merge and CI status, then print the exact candidate SHA, proposed tag,
+release-note path and post-release synchronization steps. Stop at `READY_FOR_OWNER_RELEASE`.
+The owner alone creates or pushes the tag, publishes the GitHub Release, and decides whether to
+create the post-release version/synchronization branch. This command never performs those actions.
 
 ## Never
-Tag from develop · merge any PR · move/delete a published tag · weaken the security gate.
+Tag or push anything · publish a GitHub Release · merge any PR · move/delete a published tag ·
+create a post-release synchronization branch · weaken the security gate.
 
 End: `SESSION OVER — next: human merge (main)` or `human merge (develop sync)`.
