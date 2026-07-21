@@ -73,7 +73,7 @@ it, money moves between customers.
 
 | # | Done | Spec | Risk | Model | Started (BRT) | Completed (BRT) | Why |
 |---|---|---|---|---|---|---|---|
-| 1 | ☐ | SPEC-0003 — statement & receipts | R2 | sonnet | — | — | Read-only ledger projection, no money write path (watchlist: pagination under concurrent inserts) |
+| 1 | ☐ | SPEC-0003 — statement & receipts | R2 | sonnet | 21/07/2026 17:22:41 | — | Read-only ledger projection, no money write path (watchlist: pagination under concurrent inserts) |
 | 2 | ☐ | SPEC-0004 — deposit boleto | R3 | opus | — | — | Settle-webhook vs expiry-job race to exactly one terminal status; idempotent settlement by boleto id; HMAC verification |
 | 3 | ☐ | SPEC-0005 — inbound PIX | R3 | opus | — | — | Idempotency by end-to-end id proven concurrently and on 24h replay; HMAC 401 before anything posts |
 | 4 | ☐ | SPEC-0006 — transaction PIN | R3 | opus | — | — | Gates every money route: parallel wrong-PIN attempts must converge to exactly one `PIN_LOCKED`, no lost update |

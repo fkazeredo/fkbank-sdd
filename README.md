@@ -7,10 +7,12 @@ Backend: Java 21 · Spring Boot 4.1 · Spring Modulith (modular monolith, hexago
 DDD) · PostgreSQL 16 · Flyway. Frontend: Angular 22 (standalone, zoneless, signals) · PrimeNG ·
 Tailwind 4.
 
-> **Status:** a person can open an account and sign in. Sign-up runs a KYC check against the
-> credit-bureau emulator, opens a current account at a zero balance, and issues the credential
-> that signs them in (SPEC-0002). Underneath sit the ledger (SPEC-0001), the walking skeleton with
-> its OIDC/PKCE login and architecture gates (SPEC-0018), and the observability baseline
+> **Status:** a person can open an account, sign in, and see their statement and receipts.
+> Sign-up runs a KYC check against the credit-bureau emulator, opens a current account at a zero
+> balance, and issues the credential that signs them in (SPEC-0002). The statement is a read-only,
+> keyset-paginated projection over the ledger, and every movement has a receipt showing its
+> amount, rail and status (SPEC-0003). Underneath sit the ledger (SPEC-0001), the walking skeleton
+> with its OIDC/PKCE login and architecture gates (SPEC-0018), and the observability baseline
 > (SPEC-0016). Remaining product features arrive with their own specifications; see
 > `docs/ROADMAP.md`.
 
