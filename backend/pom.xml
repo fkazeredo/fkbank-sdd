@@ -13,7 +13,7 @@
   <groupId>com.fkbank</groupId>
   <artifactId>fkbank-backend</artifactId>
   <!-- Development runs on -SNAPSHOT; the version changes only at release (CLAUDE.md §Git). -->
-  <version>0.1.0</version>
+  <version>0.2.0-SNAPSHOT</version>
   <name>fkbank-backend</name>
   <description>FKBANK backend - modular monolith (hexagonal + pragmatic DDD)</description>
 
