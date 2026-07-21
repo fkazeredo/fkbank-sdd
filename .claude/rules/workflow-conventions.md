@@ -76,6 +76,17 @@ one of the outcomes.
 What this cannot do is prevent a turn from ending — nothing inside the workflow can. What it
 guarantees is that an unfinished phase is either continued automatically or reported out loud.
 
+**`CHECKPOINTED` is a legitimate, resumable stop — NOT an in-progress state.** Use it when a
+clean-context continuation is safer than pushing this turn further: the fit gate went stale because
+scope grew, an unexpected structural change surfaced, unrelated integration failures piled up,
+context compaction/loss is observed, or worker ownership/runtime-state collided. Persist current
+state + branch + exact SHA + completed work + failing evidence + next action into
+`.claude/runtime/<id>/checkpoint.md`, leave `status: CHECKPOINTED`, clear the transient role (empty
+`current-role`/`current-slice` via the normal mechanism) and let the session end. The stop-guard
+never force-continues `CHECKPOINTED`: it accepts the stop when `checkpoint.md` exists and refuses it
+otherwise. Resume with the SAME top-level command plus `--resume` (e.g. `/deliver-spec <id>
+--resume`) — never a different phase command.
+
 ## Spec state vs slice state
 Spec lifecycle lives in structured YAML frontmatter: DRAFT → AWAITING_SPEC_APPROVAL → READY →
 IN_PROGRESS → IMPLEMENTED (or SUPERSEDED / BLOCKED), carrying `owner_approved_at` (delivery
@@ -99,12 +110,46 @@ and `/release` run the same reconcile-sweep so the last slice (which has no subs
 is closed out; `/reconcile-workflow` remains the manual fallback for the final slice or any drift.
 
 ## Hard limits (from .claude/workflow-policy.yml — never exceed, never negotiate)
-Ultracode orchestration has no repository-level limits: xhigh dynamic workflows, agent teams,
-subagents, parallel implementation, recursive orchestration, and background tasks are available
-to Claude without operator babysitting. Outcome limits remain: 2 QA runs per slice · 1 QA rework
-cycle · 1 automatic
+Ultracode orchestration has no repository-level numeric limits and needs no operator babysitting:
+xhigh dynamic workflows, agent teams, subagents, recursive orchestration, and background tasks are
+available to Claude freely. Parallel *implementation* is the one exception — controlled, not
+unrestricted (see §Controlled Ultracode parallelism): disjoint file/module ownership, one accountable
+integrator per slice, shared mutable resources serialized unless isolated, validated by
+`tools/workflow/check-slice-gate <id> parallel`. Outcome limits remain: 2 QA runs per slice · 1 QA
+rework cycle · 1 automatic
 CI fix · 1 flaky retry (diagnosis only) · 2 attempts on the same failure · 3 spec interview
 blocks · 15 min CI watch · 0 merges · 0 force pushes.
+
+## Controlled Ultracode parallelism
+Claude picks its own parallel topology WITHOUT asking, but parallel implementation is safe only under
+these ten rules — an optional `.claude/runtime/<id>/parallel-plan.json` records the ownership
+partition (absent ⇒ sequential ⇒ always safe; `"serialize": true` is the rule-10 fallback):
+1. One agent/workstream is the accountable integrator for the slice.
+2. Every writing workstream has an explicit, disjoint file/module ownership partition.
+3. Two workers must not concurrently edit the same production module.
+4. Work against shared mutable resources is serialized unless isolated: shared database; shared
+   Docker Compose project; shared emulator state; shared ports; shared runtime state; shared
+   generated contract snapshots.
+5. Read-only analysis may run freely in parallel.
+6. Tests may run in parallel only when environments and mutable state are isolated.
+7. Background workers publish ownership, expected result, and completion signal.
+8. The accountable integrator reviews and integrates every workstream before developer verification.
+9. Parallel work never lets one worker declare another worker's unintegrated changes verified.
+10. If safe ownership/resource isolation cannot be established, execute the work sequentially.
+`tools/workflow/check-slice-gate <id> parallel` validates any `parallel-plan.json` (disjoint paths,
+one integrator, resource isolation) and rejects unsafe plans unless `serialize: true`.
+
+## Slice gates (fit → DEV_VERIFIED → QA preflight)
+`DEV_VERIFIED` is a strict gate: it means a fully integrated, passing candidate — not a partial
+implementation parked for QA to finish. Before a session writes `DEV_VERIFIED`, `verify-slice` passes,
+every applicable E2E passes, every acceptance criterion has real executable developer evidence, and no
+mandatory gate is recorded as a "known limitation"; `/build` writes
+`verify_slice`/`e2e`/`acceptance_evidence`/`candidate_sha` to `state.json` and
+`tools/workflow/check-slice-gate <id> dev-verified` must pass first. A QA preflight
+(`check-slice-gate <id> qa-preflight`, read-only) runs before independent QA: it re-checks the
+DEV_VERIFIED evidence and that the candidate SHA still matches the tree handed to QA. A failing
+preflight returns the work to `BUILDING` to supply the missing/stale evidence — it is NOT a QA failure
+and consumes NO QA run. `tools/workflow/check-split` proves a spec split lost no acceptance criterion.
 
 ## Never decide an open question alone (owner-reinforced, 2026-07-20)
 
@@ -148,6 +193,14 @@ build is running" is not evidence: an editor's language server is a `java` proce
 whether or not anything is building. "Containers for this project report an uptime of seconds" is
 evidence: nothing brings a compose stack up by accident. Both came from a real command against a
 real machine; only one of them could have come out differently.
+
+## Reporting language
+Report defects factually — name the failed behavior, the evidence, the root cause, the missing
+prevention. Avoid self-referential or theatrical language ("I made a terrible mistake", "my own bug",
+repeated self-accusation). Do not minimize; do not dramatize. Prefer: "The builder-owned test did not
+cross the approval transition, so it could not detect a duplicate live onboarding." over "My test was
+blind and I made another mistake." This is tone only — it never weakens a finding's severity or
+transparency. `/build`, `/qa` and `/review-pr` reports follow this rule.
 
 ## Monitoring a background worker
 

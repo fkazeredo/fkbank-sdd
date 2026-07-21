@@ -230,10 +230,12 @@ Conversation memory is never the only source of context.
 
 ## Participants
 
-RELAY defines specialized QA, PR review, and security responsibilities while Ultracode freely
-chooses the workflow, team, subagent, parallel, and background topology:
-`qa-engineer`, `pr-reviewer`, and `security-assurance-engineer`. The operator does not open or
-coordinate separate worker sessions.
+RELAY defines specialized QA, PR review, and security responsibilities while Ultracode owns the
+workflow, team, subagent, and background orchestration: `qa-engineer`, `pr-reviewer`, and
+`security-assurance-engineer`. Parallel implementation is allowed only under safe, disjoint file
+ownership with an accountable integrator that reconciles the result; orchestration stays
+autonomous with no repository-imposed numeric limits, but never turns an independent worker's
+judgement into self-approval. The operator does not open or coordinate separate worker sessions.
 
 ### Human operator
 
@@ -537,7 +539,19 @@ Normal operation is a spec loop followed by one autonomous closeout:
 ```
 
 The granular commands below are internal phase contracts and recovery entry points, not a
-required operator ceremony.
+required operator ceremony. During normal operation the operator never invokes `/split-spec`,
+`/build`, `/qa`, or `/release`.
+
+Two edges are handled without leaving the top-level command:
+
+- **Oversized spec.** A binding implementation-fit gate runs before build. When a spec cannot fit
+  one session, the machine emits exactly one split proposal, waits for exactly one owner
+  confirmation, then atomically rewrites the spec and its Roadmap rows, validates the result, and
+  stops — no child slice is implemented in that run. This split is internal to `/deliver-spec`;
+  there is no separate `/split-spec` command for the operator to invoke.
+- **Fresh context.** Re-invoke the same top-level command with `--resume`. A clean-context restart
+  is recorded as `CHECKPOINTED` — a deliberate context reset that continues the same delivery, not
+  a failure.
 
 ## 1. Plan the Sprint
 
@@ -661,6 +675,10 @@ PLAN_APPROVED
 
 ## 5. Build
 
+A binding implementation-fit gate runs before build and must pass first: it confirms the slice is
+coherent and fits one session, and routes an oversized spec to the split flow above instead of
+starting to code.
+
 Normal orchestration enters build automatically. For manual recovery:
 
 ```text
@@ -684,6 +702,9 @@ Result:
 DEV_VERIFIED
 ```
 
+`DEV_VERIFIED` is strict: it means a fully integrated candidate whose applicable checks pass, not a
+partial build handed over on the assumption that "QA will finish it".
+
 ### Branches
 
 ```text
@@ -702,6 +723,10 @@ Never implement directly on `develop` or `main`.
 
 `/deliver-spec` invokes the independent `qa-engineer` responsibility through its Ultracode workflow. `/qa`
 is available only for recovery or diagnostics.
+
+Before that independent worker runs, a QA preflight assembles and exercises the feature end to end.
+QA is never the first stage to assemble or execute the feature — it verifies a candidate that is
+already integrated and running.
 
 ### Pass 1 — black box
 
@@ -977,11 +1002,14 @@ SECURITY_OBSERVATIONS
 AWAITING_RISK_ACCEPTANCE
 AWAITING_PRODUCTION_AUTHORIZATION
 EXTERNAL_SYSTEM_UNAVAILABLE
+CHECKPOINTED
 HUMAN_DECISION_REQUIRED
 BLOCKED
 ```
 
 Every transition records state and evidence. Normal orchestration continues automatically.
+`CHECKPOINTED` marks a deliberate clean-context restart, not a failure: resume the same top-level
+command with `--resume` and the delivery continues from its recorded state.
 
 Example:
 

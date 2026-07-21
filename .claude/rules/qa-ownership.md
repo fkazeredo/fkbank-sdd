@@ -1,5 +1,14 @@
 # QA independence and test ownership
 
+## Preflight (orchestration runs this before the first QA run)
+Independent QA starts only after an orchestration preflight (`tools/workflow/check-slice-gate <id>
+qa-preflight`, read-only) confirms: state is `DEV_VERIFIED`; canonical developer verification passed;
+every acceptance criterion already has real developer evidence; all applicable E2E passed; no required
+check skipped or failing; the candidate SHA and working tree match the evidence handed to QA. QA is
+adversarial (falsify, inspect test honesty, add independent acceptance coverage) but is **never the
+first stage to assemble or execute the complete feature**. A failed preflight is **not** a QA failure
+and consumes **no** QA run — the work returns to `BUILDING` to supply the missing/stale evidence.
+
 ## Two passes, in order (never merge them)
 1. **Black-box** — before reading any implementation: spec, environment, API/UI, execute
    every acceptance criterion LITERALLY in the environment/profile the criterion names,
@@ -52,4 +61,6 @@ Do not re-run the battery `dev-verification.md` attests (exception: checks the b
 not run, e.g. mutation on R3+ money slices). Hard bounds: HTTP calls with `--max-time 15`;
 E2E stack up in ≤3 min or fail loudly; declare expected duration on the report's first line;
 2 total runs max. Verdicts: PASS · PASS_WITH_OBSERVATIONS · FAIL_REWORK ·
-HUMAN_DECISION_REQUIRED · BLOCKED.
+HUMAN_DECISION_REQUIRED · BLOCKED. Report findings factually (`workflow-conventions.md` §Reporting
+language): name the failed behavior, its evidence, the root cause and the missing prevention — no
+theatrical self-accusation, no minimizing or dramatizing.

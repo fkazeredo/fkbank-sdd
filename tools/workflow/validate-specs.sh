@@ -15,6 +15,8 @@ for path in files:
  if re.search(r'^status:\s*READY\s*$',fm,re.M) and re.search(r'^owner_approved_at:\s*null\s*$',fm,re.M): failed.append(f'{path}: READY without owner approval')
  if re.search(r'^status:\s*(READY|IN_PROGRESS|IMPLEMENTED)\s*$',fm,re.M) and re.search(r'^owner_approved_hash:\s*null\s*$',fm,re.M): failed.append(f'{path}: approved lifecycle state without content hash')
  if re.search(r'SPEC-\d{4}\.\.',fm): failed.append(f'{path}: dependency range not expanded')
+ sf=re.search(r'^split_from:\s*(\S+)\s*$',fm,re.M)
+ if sf and not re.match(r'^SPEC-\d{4}$',sf.group(1)): failed.append(f'{path}: invalid split_from')
  for section in ('Business rules','Decision log'):
   if not re.search(rf'^## {re.escape(section)}\s*$',text,re.M): failed.append(f'{path}: missing ## {section}')
  line=re.search(r'^modules:\s*\[(.*?)\]\s*$',fm,re.M)

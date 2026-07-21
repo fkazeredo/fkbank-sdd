@@ -16,6 +16,17 @@ risk · security.
 Scope: extra functionality · behavior removal · work outside the spec · slice too big ·
 structural refactor discovered mid-build.
 
+## Oversized spec (TOO_LARGE) → one-question split
+When the implementation-fit gate (`decision-ladder.md` §Implementation-fit gate) returns
+`TOO_LARGE`, splitting the spec is a material technical/scope decision. `/deliver-spec` first
+generates a concrete split proposal — child ids/titles/goals/scope/acceptance criteria, which
+original criteria move to each child, the Roadmap rows that replace the original, every `depends_on`
+to redirect, the original file to delete — and then stops with **exactly one question: "Do you want
+me to apply this split?"** Decline ⇒ leave every file unchanged and end at `HUMAN_DECISION_REQUIRED`.
+Approve ⇒ one atomic spec/Roadmap rewrite, then validation, then stop before implementing the first
+child. **A narrative claim ("no value when split", "no customer value") NEVER overrides the fit
+gate.**
+
 ## What does NOT require asking (convention discriminator: a WRITTEN rule exists)
 Formatter output · local naming · private organization · reversible choice · a clear
 existing pattern · a detail the spec covers · a decision already in an ADR / Decision log /

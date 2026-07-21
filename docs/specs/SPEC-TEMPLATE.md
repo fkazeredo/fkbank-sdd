@@ -31,6 +31,9 @@ temporarily normalized to `null`; `/deliver-spec` computes and verifies it autom
        instant; /workflow-status and /reconcile-workflow remain manual fallbacks.
      risk: R0–R4 per .claude/rules/risk-model.md — touching a DOMAIN invariant ⇒ at least R3.
      reading_list: the slice run reads ONLY these sections (budgeted reading).
+     split_from (children of a split only): OPTIONAL provenance, value SPEC-<original-id> (format
+       SPEC-NNNN). It points at the DELETED original spec, so it is NOT a dependency and is NEVER
+       existence-checked (unlike depends_on). Omit it on a normal new spec.
      Relevant ADRs, if any, are listed under ## Impact. -->
 
 ## Context

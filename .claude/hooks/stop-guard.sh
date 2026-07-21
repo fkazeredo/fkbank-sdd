@@ -7,6 +7,11 @@
 # one-shot); it must look for the terminal marker in the last thing the assistant actually said
 # (searching the whole transcript matched the marker inside the instructions describing it); and
 # when the budget runs out it must address the human, not only the model.
+#
+# CHECKPOINTED is a legitimate resumable stop, not an in-progress state: it means a clean-context
+# continuation is safer than pushing this turn further, so the guard never force-continues it. It
+# is accepted only when its evidence artifact checkpoint.md is present, mirroring how BLOCKED
+# requires block-report.md.
 set -uo pipefail
 
 PAYLOAD="$(cat)"
@@ -79,6 +84,7 @@ esac
 
 [ -f "$DIR/metrics.json" ] || { echo "stop-guard: missing metrics.json for $ID." >&2; exit 2; }
 [ "$STATUS" != BLOCKED ] || [ -f "$DIR/block-report.md" ] || { echo 'stop-guard: BLOCKED requires block-report.md.' >&2; exit 2; }
+[ "$STATUS" != CHECKPOINTED ] || [ -f "$DIR/checkpoint.md" ] || { echo 'stop-guard: CHECKPOINTED requires checkpoint.md.' >&2; exit 2; }
 case "$STATUS" in
   AWAITING_SPEC_INPUT|AWAITING_SPEC_APPROVAL|HUMAN_DECISION_REQUIRED|READY)
     [ -f "$DIR/spec-path.txt" ] || [ -f "$DIR/decision-request.md" ] \
