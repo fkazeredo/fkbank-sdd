@@ -3,6 +3,12 @@
 Candidate: `e12711b` on `release/0.1.0` — the SHA the release carries, with the final assurance
 verdict on it (see §4). Closed 2026-07-20. Release class: **internal pilot / pre-release**.
 
+**Released.** PR #11 merged to `develop` (merge `3d1b910`); the owner created `main` and the
+annotated tag **`v0.1.0`** at `3d1b910` by hand, as decided. `develop` was then returned to the
+next development cycle — backend `0.2.0-SNAPSHOT`, frontend `0.2.0` — via PR #12 (merge
+`81f9a67`). `main`, the tag, and `develop` are synchronized (`main` is an ancestor of `develop`).
+State: **`SPRINT_RELEASED`**.
+
 ## 1. Goal and outcome
 
 > Walking skeleton observable from day one; the accounting heart proven by race tests; a person
