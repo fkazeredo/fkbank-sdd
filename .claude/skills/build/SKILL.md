@@ -34,6 +34,15 @@ stays truthful (`.claude/rules/qa-ownership.md` §Bidirectional boundary).
    limited to suitable immutable messages or self-validating value objects. Lombok may remove
    boilerplate, but `@Data`, public setters and invariant-bypassing constructors are forbidden
    on aggregates and entities.
+   **Discriminating evidence** (workflow-conventions.md §Evidence): every test for a critical
+   invariant, concurrency control, schema constraint, authorization rule, idempotency rule or
+   state transition must answer "what would this show if the protection were absent or
+   mis-scoped?" A concurrency test crosses the intended race window (not merely two concurrent
+   starts); a schema test attacks the exact constraint; a state-machine test covers before,
+   during and after the protected state; a regression test fails against the defect and passes
+   after the fix; a mocked external timeout does not prove real client timeout behavior. R3/R4
+   concurrency or schema invariants need ≥1 deterministic structural test alongside probabilistic
+   trials. Evidence that looks the same with and without the protection is invalid.
 3. Deviation from the plan (unplanned component/dependency/abstraction/contract/reuse):
    re-open the Decision Ladder for that decision. Material ⇒ HUMAN_DECISION_REQUIRED
    (batch doubts per checkpoint). New production dependency ⇒ always human, with
@@ -47,8 +56,29 @@ stays truthful (`.claude/rules/qa-ownership.md` §Bidirectional boundary).
    before the change is invalidated.
 5. Finish: run `tools/quality/verify-slice` in full. Fill
    `.claude/runtime/<id>/dev-verification.md` (template) — commands + results, AC →
-   evidence table, tests created, checks skipped + why, deviations, limitations.
-6. State → `DEV_VERIFIED`.
+   evidence table (with the discriminating question answered per protection), tests created,
+   checks skipped + why, deviations, limitations. Write the report factually
+   (workflow-conventions.md §Reporting language): name any failed behavior, its evidence, root
+   cause and missing prevention; do not dramatize or minimize.
+6. **Strict DEV_VERIFIED gate.** `DEV_VERIFIED` means a fully integrated, passing candidate —
+   not a partial implementation awaiting QA. Write to `state.json`: `verify_slice`
+   (`pass`/`fail`), `e2e` (`pass`/`fail`/`not_applicable`), `acceptance_evidence`
+   (`complete`/`incomplete`), and `candidate_sha` (the HEAD the evidence was produced against).
+   Run `tools/workflow/check-slice-gate <id> dev-verified`; set `DEV_VERIFIED` only when it
+   passes AND all nine hold: (1) `verify-slice` passes; (2) every mandatory check applicable to
+   the diff passes; (3) E2E passes when the change affects a user journey, auth flow, public
+   route, external integration, frontend route, or Compose topology; (4) every acceptance
+   criterion has real executable developer evidence in the appropriate environment; (5) required
+   concurrency behavior exercised against the real persistence engine + declared isolation;
+   (6) required external timeout/callback/retry/emulator behavior exercised across the real
+   process/network boundary; (7) no mandatory gate recorded as a "known limitation"; (8) no
+   failing test excused merely because it predates a change that intentionally invalidated its
+   assumption; (9) no acceptance behavior deferred to QA for its first execution. Any condition
+   false ⇒ stay `BUILDING`, or write `BLOCKED`/`HUMAN_DECISION_REQUIRED`. **"QA owns this test
+   path" never means the builder skips validating the behavior**: the builder need not author
+   QA-owned acceptance tests, but the behavior MUST already have been exercised successfully
+   (builder integration test, existing E2E, real-stack command, or another executable probe)
+   before QA begins.
 
 ## Rework mode (entry: QA_REWORK — max 1 cycle)
 Scope = the exact executable repro of each QA finding + this slice's own suite. NEVER re-run
@@ -56,8 +86,15 @@ the full battery. Each confirmed bug ⇒ regression test that fails first (from 
 Then steps 5–6 again.
 
 ## Terminal states
-DEV_VERIFIED · HUMAN_DECISION_REQUIRED · BLOCKED (2 attempts on the same failure ⇒ BLOCKED
-+ block-report)
+DEV_VERIFIED · CHECKPOINTED · HUMAN_DECISION_REQUIRED · BLOCKED (2 attempts on the same failure
+⇒ BLOCKED + block-report)
+
+`CHECKPOINTED` when a clean-context continuation is safer than pushing this turn (scope grew and
+invalidated the fit gate, an unexpected structural change appeared, unrelated integration
+failures accumulated, context loss was observed, or a worker ownership/runtime-state collision
+occurred): persist `.claude/runtime/<id>/checkpoint.md` (state, branch, exact SHA, completed
+work, failing evidence, next action), leave status `CHECKPOINTED`, and resume from that evidence
+in a fresh context with the same top-level command `--resume`.
 
 ## Never
 Push to develop/main · change the spec without a Decision log entry · continue past limits

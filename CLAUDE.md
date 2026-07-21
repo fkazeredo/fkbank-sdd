@@ -21,10 +21,12 @@ Development follows the **RELAY** workflow. Its authority is this file,
 `.claude/workflow-policy.yml`, `.claude/rules/`, and the invoked skill. The human-readable
 index is `docs/workflow/README.md`; it does not override executable contracts. Non-negotiable:
 
-- Ultracode orchestration is unrestricted. At xhigh effort, Claude may create and manage dynamic
-  workflows, agent teams, subagents, parallel implementers, and background tasks in whatever
-  topology it judges most effective. Do not impose repository-level numeric limits or require
-  the operator to supervise internal orchestration.
+- Ultracode orchestration is autonomous but controlled. At xhigh effort, Claude may create and
+  manage dynamic workflows, agent teams, subagents, parallel implementers, and background tasks in
+  whatever topology it judges most effective — subject to safe ownership + integration (invariant 7):
+  disjoint file/module partitions, one accountable integrator, shared resources serialized. That is a
+  correctness constraint, not a repository-level numeric limit and not operator supervision of
+  internal orchestration.
 - RELAY is an evidence-driven state machine, not a human ceremony. `/deliver-spec`,
   `/close-sprint`, and the optional `/deliver-sprint` advance phases automatically and
   idempotently until a real terminal or external-wait state. The operator never babysits
@@ -76,11 +78,17 @@ spec delivered in one loop; after the last merge it automatically executes this 
    `main`/`develop`, never force-pushes, never moves or deletes a published tag, never
    approves its own PR.
 7. **Ultracode autonomy, accountable results.** Claude owns its internal orchestration and may use
-   xhigh dynamic workflows, agent teams, subagents, parallel work, and background execution
-   without repository-imposed limits. It must still integrate a coherent result, preserve
-   evidence and scope, and respect role-specific write boundaries. Independent `qa-engineer`,
-   `pr-reviewer`, and `security-assurance-engineer` verdicts remain independent in
-   responsibility; orchestration mechanics must not turn them into self-approval.
+   xhigh dynamic workflows, agent teams, subagents, parallel work, and background execution without
+   repository-imposed numeric limits or operator babysitting — but parallelism is *controlled*, not
+   unrestricted: every writing workstream has an explicit, disjoint file/module ownership partition,
+   two workers never edit the same production module at once, shared mutable resources (database,
+   Compose project, emulator state, ports, runtime state, contract snapshots) are serialized unless
+   isolated, and one accountable integrator reviews and integrates every workstream before developer
+   verification. No worker declares another worker's unintegrated changes verified. Claude must still
+   integrate a coherent result, preserve evidence and scope, and respect role-specific write
+   boundaries. Independent `qa-engineer`, `pr-reviewer`, and `security-assurance-engineer` verdicts
+   remain independent in responsibility; orchestration mechanics must not turn them into
+   self-approval.
 8. **Human Decision Gate.** No silent assumptions, no silent conflict resolution, no
    material decision without human visibility. Stop with a `decision-request.md`
    (`.claude/rules/human-decision-gate.md`).
@@ -131,8 +139,9 @@ short of them is ordinary delivery, not a risky action to pause on.
 ## Execution
 
 Top-level commands continue across internal transitions automatically. Ultracode owns all
-workflow, agent-team, subagent, parallel, and background orchestration without operator
-management. Each transition persists evidence before
+workflow, agent-team, subagent, parallel, and background orchestration without operator management
+or numeric limits — controlled autonomy: safe ownership + integration (invariant 7), not an
+unmanaged free-for-all. Each transition persists evidence before
 the next begins. If execution cannot reach a terminal or external-wait state, write `BLOCKED` + a Workflow Block Report
 (`.claude/templates/block-report.md`) and stop. Never keep trying past the limits in
 `.claude/rules/workflow-conventions.md`.

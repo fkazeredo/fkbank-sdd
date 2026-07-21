@@ -6,6 +6,7 @@ foreach($f in $specs){$text=Get-Content $f.FullName -Raw;$m=[regex]::Match($text
   if($fm -match '(?m)^status:\s*READY\s*$' -and $fm -match '(?m)^owner_approved_at:\s*null\s*$'){Write-Error "$($f.Name): READY without owner approval";$fail=1}
   if($fm -match '(?m)^status:\s*(READY|IN_PROGRESS|IMPLEMENTED)\s*$' -and $fm -match '(?m)^owner_approved_hash:\s*null\s*$'){Write-Error "$($f.Name): approved lifecycle state without content hash";$fail=1}
   if($fm -match 'SPEC-\d{4}\.\.'){Write-Error "$($f.Name): dependency range not expanded";$fail=1}
+  $sf=[regex]::Match($fm,'(?m)^split_from:\s*(\S+)\s*$');if($sf.Success -and $sf.Groups[1].Value -notmatch '^SPEC-\d{4}$'){Write-Error "$($f.Name): invalid split_from";$fail=1}
   foreach($section in @('Business rules','Decision log')){if($text -notmatch "(?m)^## $([regex]::Escape($section))\s*$"){Write-Error "$($f.Name): missing ## $section";$fail=1}}
   $moduleLine=([regex]::Match($fm,'(?m)^modules:\s*\[(.*?)\]\s*$')).Groups[1].Value
   foreach($module in ($moduleLine -split ',' | ForEach-Object {$_.Trim().Trim('"').Trim("'")} | Where-Object {$_})){if($allowedModules.Count -and $module -notin $allowedModules){Write-Error "$($f.Name): unknown module $module";$fail=1}}

@@ -17,7 +17,8 @@ orchestration:
   dynamic_workflows: unrestricted
   agent_teams: unrestricted
   subagents: unrestricted
-  parallel_implementation: unrestricted
+  parallel_implementation: controlled     # safe ownership + integration, not a numeric cap
+  parallel_integration: accountable       # one accountable integrator owns the merged slice result
   background_tasks: unrestricted
   repository_numeric_limits: none
 
@@ -43,6 +44,19 @@ limits:                            # outcome bounds -- see .claude/rules/workflo
   ci_watch_minutes: 15
   merges_by_agent: 0
   force_pushes: 0
+
+slice_gates:                       # binding implementation gates (tools/workflow/check-slice-gate)
+  fit_gate: binding                # TOO_LARGE / ambiguous never enters implementation
+  dev_verified_requires:
+    - verify_slice_pass
+    - applicable_e2e_pass
+    - acceptance_evidence_complete
+    - no_skipped_mandatory_gate
+  qa_preflight: required           # runs before independent QA; failure returns to BUILDING, consumes no QA run
+  checkpoint_state: CHECKPOINTED    # clean-context restart; resume via the same top-level command --resume
+
+resumable_context_states:          # non-success states the stop-guard accepts as legitimate resumable stops
+  - CHECKPOINTED
 
 
 state_machine:

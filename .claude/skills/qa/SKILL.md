@@ -11,7 +11,12 @@ Role: `qa` (path-guard enforces QA-owned paths). Run as the independent `qa-engi
 responsibility inside the Ultracode workflow (strong model for R3/R4 per workflow-policy.yml).
 
 ## Preconditions
-`state.json` = DEV_VERIFIED. Risk R2+.
+`state.json` = DEV_VERIFIED. Risk R2+. Before QA is spawned, orchestration runs the read-only
+QA preflight `tools/workflow/check-slice-gate <id> qa-preflight`; a failing preflight consumes NO
+QA run and returns the slice to `BUILDING` (missing or stale developer evidence — this is NOT a
+QA failure). QA is adversarial and independent — falsify the criteria, inspect test quality, add
+independent acceptance coverage — but is NEVER the first stage to assemble or execute the
+complete feature; that integration is the builder's, proven before QA begins.
 
 ## Steps
 1. State → `QA_RUNNING`. Read the spec + `dev-verification.md` + `state.json`. Treat
@@ -42,6 +47,9 @@ first line and compare at the end (>2× ⇒ investigate side effects before wait
 ## Never
 Read or change production code during black-box · write outside QA-owned paths · edit
 builder-owned tests · re-run the attested battery · merge or push protected branches.
+
+Report findings factually (workflow-conventions.md §Reporting language): name the failed
+behavior, its evidence, root cause and the missing prevention; do not dramatize, do not minimize.
 
 Return a structured terminal result to the orchestrator: `QA_REWORK`, `QA_VERIFIED`,
 `QA_OBSERVATIONS`, `HUMAN_DECISION_REQUIRED`, or `BLOCKED`.

@@ -25,8 +25,9 @@ in `CLAUDE.md` applies.
 | `/deliver-sprint <sprint> [--resume]` | optional: delivers all committed specs, then closes and releases the Sprint |
 | `/close-sprint <sprint> [--resume]` | normal closeout after individual specs: reconcile, verify, assure, prepare and finalize the release |
 
-Granular commands such as `/design-slice`, `/build`, `/qa`, `/pr`, and `/review-pr` are internal
-phase contracts and recovery entries. They are not mandatory operator ceremonies.
+Granular commands such as `/design-slice`, `/build`, `/qa`, `/pr`, `/review-pr`,
+and `/release` are internal phase contracts and recovery entries. They are not mandatory operator
+ceremonies — normal operation never invokes them directly.
 
 The routine operator flow is deliberately small:
 
@@ -40,6 +41,15 @@ preparation and finalization. A protected-branch merge is the only normal human 
 resume the same top-level command. `/deliver-sprint` is the less common one-command alternative
 that performs the spec loop and then delegates to the identical closeout.
 
+An oversized spec never proceeds silently. A binding implementation-fit gate runs before build;
+when a spec cannot fit one session it produces exactly one split proposal, waits for exactly one
+owner confirmation, then atomically rewrites the spec and its Roadmap rows, validates the result,
+and stops — no child slice is implemented in that run. This split is internal to `/deliver-spec`;
+the operator never invokes a separate `/split-spec` command.
+
+A fresh session resumes any top-level command with `--resume`. A clean-context restart is
+recorded as `CHECKPOINTED` — a deliberate context reset, not a failure.
+
 ## Machine boundary
 
 RELAY may derive reversible technical decisions from approved product and architecture. It must
@@ -51,6 +61,14 @@ When it stops, it asks and recommends. An open question is never closed by the m
 judgement, and options are never handed over without one of them being recommended — the first
 takes the decision away from the owner, the second hands the work back. Every answer is then
 recorded durably, per `.claude/rules/human-decision-gate.md`.
+
+Three guarantees protect quality on the way to that merge. A binding implementation-fit gate runs
+before any build. `DEV_VERIFIED` is strict — a fully integrated candidate whose applicable checks
+pass, never a partial build left for QA to finish. A QA preflight assembles and exercises the
+feature before the independent `qa-engineer` runs, so QA is never the first stage to assemble or
+execute it. Parallel implementation is permitted only under safe, disjoint file ownership with an
+accountable integrator that reconciles the result; orchestration stays autonomous with no
+repository-imposed numeric limits.
 
 Ownership of files follows the cycle, not a permanent map. While an independent worker owns its
 work the machine leaves its artifacts alone; once that worker's cycles are spent, the work has

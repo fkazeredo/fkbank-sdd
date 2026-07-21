@@ -18,6 +18,11 @@
 #    warnings are addressed exclusively to the thing that stopped responding is a guard nobody
 #    reads. Exhausting the budget prints a message the operator sees, so an unfinished slice is
 #    loud rather than silent.
+#
+# CHECKPOINTED is a legitimate resumable stop, not an in-progress state: it means a clean-context
+# continuation is safer than pushing this turn further, so the guard never force-continues it. It
+# is accepted only when its evidence artifact checkpoint.md is present, mirroring how BLOCKED
+# requires block-report.md.
 
 $ErrorActionPreference = 'SilentlyContinue'
 
@@ -102,6 +107,10 @@ if (-not (Test-Path -LiteralPath (Join-Path $dir 'metrics.json'))) {
 }
 if ($state.status -eq 'BLOCKED' -and -not (Test-Path -LiteralPath (Join-Path $dir 'block-report.md'))) {
   [Console]::Error.WriteLine('stop-guard: BLOCKED requires block-report.md.')
+  exit 2
+}
+if ($state.status -eq 'CHECKPOINTED' -and -not (Test-Path -LiteralPath (Join-Path $dir 'checkpoint.md'))) {
+  [Console]::Error.WriteLine('stop-guard: CHECKPOINTED requires checkpoint.md.')
   exit 2
 }
 if ($state.status -in @('AWAITING_SPEC_INPUT', 'AWAITING_SPEC_APPROVAL', 'HUMAN_DECISION_REQUIRED', 'READY') `

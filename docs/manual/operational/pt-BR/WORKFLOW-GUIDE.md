@@ -231,8 +231,12 @@ A memória de uma conversa nunca é a única fonte do contexto.
 ## Participantes
 
 O RELAY possui um agente principal orquestrador/implementador e exatamente três workers
-especializados, orquestrados livremente pelo Ultracode: `qa-engineer`, `pr-reviewer` e
-`security-assurance-engineer`. O operador não abre nem coordena sessões separadas dos workers.
+especializados, orquestrados pelo Ultracode: `qa-engineer`, `pr-reviewer` e
+`security-assurance-engineer`. A implementação em paralelo só é permitida sob propriedade de
+arquivos segura e disjunta, com um integrador responsável que reconcilia o resultado; a
+orquestração permanece autônoma, sem limites numéricos impostos pelo repositório, mas nunca
+transforma o julgamento de um worker independente em autoaprovação. O operador não abre nem
+coordena sessões separadas dos workers.
 
 ### Operador humano
 
@@ -538,7 +542,20 @@ A operação normal é um loop de specs seguido por um único fechamento autôno
 ```
 
 Os comandos granulares abaixo são contratos internos e entradas de recuperação, não uma
-cerimônia obrigatória para o operador.
+cerimônia obrigatória para o operador. Na operação normal o operador nunca invoca `/split-spec`,
+`/build`, `/qa` ou `/release`.
+
+Duas bordas são tratadas sem sair do comando de topo:
+
+- **Spec grande demais.** Um gate obrigatório de aderência de implementação roda antes do build.
+  Quando uma spec não cabe em uma sessão, a máquina emite exatamente uma proposta de divisão,
+  aguarda exatamente uma confirmação do owner, reescreve atomicamente a spec e suas linhas no
+  Roadmap, valida o resultado e para — nenhuma fatia filha é implementada nessa execução.
+  Essa divisão é interna ao `/deliver-spec`; não há um comando `/split-spec` separado para o
+  operador invocar.
+- **Contexto novo.** Reinvoque o mesmo comando de topo com `--resume`. Um reinício com contexto
+  limpo é registrado como `CHECKPOINTED` — uma reinicialização deliberada de contexto que continua
+  a mesma entrega, não uma falha.
 
 ## 1. Planejar a Sprint
 
@@ -661,6 +678,10 @@ PLAN_APPROVED
 
 ## 5. Implementar
 
+Um gate obrigatório de aderência de implementação roda antes do build e precisa passar primeiro:
+ele confirma que a fatia é coerente e cabe em uma sessão, e encaminha uma spec grande demais para
+o fluxo de divisão acima em vez de começar a codificar.
+
 A orquestração normal entra no build automaticamente. Para recuperação manual:
 
 ```text
@@ -684,6 +705,9 @@ Resultado:
 DEV_VERIFIED
 ```
 
+`DEV_VERIFIED` é estrito: significa um candidato totalmente integrado cujos checks aplicáveis
+passam, não um build parcial repassado sob a suposição de que "o QA vai terminar".
+
 ### Branches
 
 ```text
@@ -702,6 +726,10 @@ Nunca implemente diretamente em `develop` ou `main`.
 
 `/deliver-spec` aciona a responsabilidade independente `qa-engineer` pelo workflow Ultracode. `/qa`
 fica disponível apenas para recuperação ou diagnóstico.
+
+Antes de esse worker independente rodar, um preflight de QA monta e exercita a funcionalidade de
+ponta a ponta. O QA nunca é o primeiro estágio a montar ou executar a funcionalidade — ele verifica
+um candidato que já está integrado e em execução.
 
 ### Passagem 1 — black-box
 
@@ -977,11 +1005,14 @@ SECURITY_OBSERVATIONS
 AWAITING_RISK_ACCEPTANCE
 AWAITING_PRODUCTION_AUTHORIZATION
 EXTERNAL_SYSTEM_UNAVAILABLE
+CHECKPOINTED
 HUMAN_DECISION_REQUIRED
 BLOCKED
 ```
 
 Cada transição registra estado e evidência. A orquestração normal continua automaticamente.
+`CHECKPOINTED` marca um reinício deliberado com contexto limpo, não uma falha: retome o mesmo
+comando de topo com `--resume` e a entrega continua a partir do estado registrado.
 
 Exemplo:
 

@@ -28,7 +28,7 @@ Order (never skip a rung):
 ## Where it executes
 - `/spec`: rung 1 per acceptance criterion + duplicate-capability check. No deep code search.
 - `/design-slice`: the FULL ladder, once, recorded as `## Decision Ladder` in plan.md (R2+),
-  plus the one-session fit check.
+  plus the implementation-fit gate (§Implementation-fit gate).
 - `/build`: re-opens the ladder ONLY on deviation (unplanned component, dependency,
   abstraction, ownership change, new contract, unmapped reuse). Material deviation ⇒
   HUMAN_DECISION_REQUIRED.
@@ -36,9 +36,35 @@ Order (never skip a rung):
   the broad search.
 - R0/R1: apply mentally; one short summary line in the result.
 
-## Slice-too-big signals (split before derived-plan validation)
-More than three independent vertical behaviors · structural change + feature in one slice ·
-new cross-context contract + full UI · migration + backfill + behavior together · multiple
-external integrations · independent rollout plans · parts releasable/testable separately ·
-expected compaction during /build. No rigid file-count limit — the question is cohesion,
-verifiability and one-session completion.
+## Implementation-fit gate (canonical home — every other file references this)
+The binding check that an approved spec is deliverable in one clean build session. It runs near the
+start of delivery, before production code: R2+ produces it in `/design-slice` (the old one-session
+fit check, upgraded to this formal gate); R0/R1 (no `/design-slice`) run it inline in `/deliver-spec`
+before `/build`. The result is written to `state.json.fit` and CONSUMED by `/deliver-spec` (binding):
+before a slice may enter BUILDING, orchestration runs `tools/workflow/check-slice-gate <id> fit`,
+which passes only when `fit == FIT`.
+
+The eight signals:
+1. More than three independent vertical behaviors.
+2. More than two bounded contexts receive behavioral changes.
+3. Backend, frontend, migration, and external integration are all changed by the same spec.
+4. A new emulator or external service is introduced together with a complete product journey.
+5. A structural or architectural change is combined with product behavior.
+6. A new cross-context contract is combined with full UI delivery.
+7. The implementation is expected not to fit in one clean build context/session.
+8. One or more acceptance criteria would receive their first real end-to-end execution only during
+   independent QA.
+
+Classification:
+- **TOO_LARGE** — at least **three** signals present, OR any **single** condition that makes
+  one-session implementation clearly unsafe even with fewer than three (e.g. a destructive migration
+  combined with a product journey; multiple money-moving behaviors with concurrency requirements).
+- **HUMAN_DECISION_REQUIRED** — the information needed to classify is genuinely ambiguous.
+- **FIT** — otherwise.
+
+Binding consequences: FIT ⇒ continue automatically. TOO_LARGE ⇒ do not begin implementation; generate
+the split proposal and stop for one owner confirmation (`human-decision-gate.md` §Oversized spec).
+Ambiguous ⇒ stop with exactly one concrete Human Decision Request. **A narrative claim (e.g. "no
+customer value when split") NEVER overrides the fit gate.** Child specs may be independently
+integrable and testable without being independently releasable to users. No rigid file-count limit —
+the question is cohesion, verifiability and one-session completion.

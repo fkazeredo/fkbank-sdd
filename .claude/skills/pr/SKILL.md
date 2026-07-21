@@ -15,7 +15,10 @@ builder session.
 ## Steps
 1. Run `tools/git/check-safe-branch ... pr --allow-dirty`; state → `PR_PREPARING`.
 2. Diff review checklist: spec fidelity (no silent scope change) · house rules
-   (docs/ARCHITECTURE.md) · tests with real assertions · contracts/OpenAPI regenerated ·
+   (docs/ARCHITECTURE.md) · tests with real assertions · **discriminating-test check**: a test
+   for a critical invariant/concurrency/schema/authz/idempotency/state-transition that would look
+   the same with and without the protection is rejected (workflow-conventions.md §Evidence) ·
+   contracts/OpenAPI regenerated ·
    Javadoc/TSDoc on the public surface · **Decision Ladder check**: the plan's recorded
    ladder vs the actual diff (no broad re-search) · behavioral-domain check: invariants live
    on the model, changed aggregates are not records/data bags, and Lombok does not expose
