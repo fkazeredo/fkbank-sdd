@@ -7,6 +7,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -366,6 +367,62 @@ class LedgerTest {
     }
   }
 
+  @Nested
+  @DisplayName("statement queries")
+  class StatementQueries {
+
+    @Test
+    @DisplayName("looks up an account's code and an account by its code")
+    void resolvesCodeAndAccountId() {
+      Account account = emptyCustomer();
+
+      assertThat(ledger.codeOf(account.id())).contains(account.code());
+      assertThat(ledger.accountIdOf(account.code())).isEqualTo(account.id());
+    }
+
+    @Test
+    @DisplayName("refuses an unknown code with a stable code")
+    void refusesAnUnknownCode() {
+      assertThatThrownBy(() -> ledger.accountIdOf("customer:available:missing"))
+          .isInstanceOf(UnknownAccountException.class);
+    }
+
+    @Test
+    @DisplayName("reports whether a movement was reversed")
+    void reportsWhetherReversed() {
+      Account from = customerHolding("100.00");
+      Account to = emptyCustomer();
+      Posting posting = ledger.record(from.id(), to.id(), Money.of("10.00"));
+
+      assertThat(ledger.isReversed(posting.id())).isFalse();
+
+      ledger.reverse(posting.id());
+
+      assertThat(ledger.isReversed(posting.id())).isTrue();
+    }
+
+    @Test
+    @DisplayName("delegates the statement query to the posting repository, refusing an unknown account first")
+    void delegatesTheStatementQuery() {
+      Account from = customerHolding("100.00");
+      Account to = emptyCustomer();
+      ledger.record(from.id(), to.id(), Money.of("10.00"));
+
+      List<PostingLine> lines =
+          ledger.statementOf(
+              to.id(), Instant.EPOCH, NOW.plusSeconds(1), null, null, null, 10);
+
+      assertThat(lines).hasSize(1);
+      assertThat(lines.get(0).direction()).isEqualTo(Direction.CREDIT);
+      assertThat(lines.get(0).runningBalance()).isEqualTo(Money.of("10.00"));
+
+      Account unknown = Account.existing(AccountId.of(999_999L), AccountKind.CUSTOMER_AVAILABLE, "gone");
+      assertThatThrownBy(
+              () -> ledger.statementOf(unknown.id(), Instant.EPOCH, NOW, null, null, null, 10))
+          .isInstanceOf(UnknownAccountException.class);
+    }
+  }
+
   // ---------------------------------------------------------------------------------------
   // Fakes. Deliberately hand-written rather than mocked: they record the ordering facts the
   // assertions above depend on, which a mock's verification syntax states less clearly.
@@ -459,6 +516,62 @@ class LedgerTest {
 
     boolean reversalProbedWhileHoldingLocks() {
       return !reversalProbes.isEmpty() && reversalProbes.stream().allMatch(Boolean::booleanValue);
+    }
+
+    @Override
+    public List<PostingLine> statementOf(
+        AccountId accountId,
+        Instant from,
+        Instant to,
+        Direction direction,
+        Instant cursorOccurredAt,
+        PostingId cursorPostingId,
+        int limit) {
+      List<Posting> legs =
+          saved.stream()
+              .filter(
+                  posting ->
+                      posting.debitAccountId().equals(accountId)
+                          || posting.creditAccountId().equals(accountId))
+              .sorted(
+                  Comparator.comparing(Posting::occurredAt)
+                      .thenComparing(posting -> posting.id().value()))
+              .toList();
+
+      List<PostingLine> chronological = new ArrayList<>(legs.size());
+      Money running = Money.zero();
+      for (Posting posting : legs) {
+        boolean isDebitLeg = posting.debitAccountId().equals(accountId);
+        running = isDebitLeg ? running.subtract(posting.amount()) : running.add(posting.amount());
+        chronological.add(
+            new PostingLine(posting, isDebitLeg ? Direction.DEBIT : Direction.CREDIT, running));
+      }
+
+      List<PostingLine> filtered =
+          chronological.stream()
+              .filter(line -> !line.posting().occurredAt().isBefore(from))
+              .filter(line -> line.posting().occurredAt().isBefore(to))
+              .filter(line -> direction == null || line.direction() == direction)
+              .filter(line -> isBeforeCursor(line, cursorOccurredAt, cursorPostingId))
+              .sorted(
+                  Comparator.<PostingLine, Instant>comparing(line -> line.posting().occurredAt())
+                      .thenComparing((PostingLine line) -> line.posting().id().value())
+                      .reversed())
+              .toList();
+
+      return filtered.size() > limit ? filtered.subList(0, limit) : filtered;
+    }
+
+    private static boolean isBeforeCursor(
+        PostingLine line, Instant cursorOccurredAt, PostingId cursorPostingId) {
+      if (cursorOccurredAt == null) {
+        return true;
+      }
+      int comparison = line.posting().occurredAt().compareTo(cursorOccurredAt);
+      if (comparison != 0) {
+        return comparison < 0;
+      }
+      return line.posting().id().value().compareTo(cursorPostingId.value()) < 0;
     }
   }
 
