@@ -205,9 +205,8 @@ flowchart LR
     P --> CI[Authoritative CI]
     CI --> R[PR review worker when required]
     R --> M[Human merge]
-    M --> C[/close-sprint/]
-    C --> SEC[Security Assurance worker when applicable]
-    SEC --> REL[Release]
+    M --> C[/close-sprint: closure gate + Security Assurance/]
+    C --> REL[/release: separate owner decision/]
 ```
 
 Each phase passes the baton through persistent artifacts:
@@ -221,7 +220,7 @@ spec
 → CI
 → review report when required
 → human decision
-→ Sprint closure and security report
+→ Sprint closure record and draft release notes
 ```
 
 Conversation memory is never the only source of context.
@@ -321,8 +320,13 @@ The reviewer does not edit, automatically comment, approve or merge.
 
 ### `security-assurance-engineer`
 
-Independent final-delivery security worker invoked automatically by `/close-sprint` when the
-Sprint contains R3/R4 work or policy otherwise requires it.
+Independent final-delivery security worker invoked automatically by `/close-sprint` at Sprint
+closure (the complete track over the integrated candidate) and by `/release` for a release
+candidate; an explicit `/security-assurance` is the manual entry. It runs whenever the candidate
+contains R3/R4 work or policy otherwise requires it. This is the assembled-system security battery —
+DAST, secrets, SCA, licenses, containers, IaC, the cross-slice authorization matrix, endpoint
+exposure, and security headers — different from the per-slice checks each spec already ran, never a
+mechanical repeat.
 
 Responsibilities:
 
@@ -385,8 +389,8 @@ Every versioned change has at least a **Light Spec**.
 → mandatory isolated review worker
 → human review
 → human merge
-→ /close-sprint invokes security-assurance-engineer
-→ release
+→ /close-sprint runs the complete Security Assurance over the integrated candidate
+→ /release (owner-driven, separate)
 ```
 
 ---
@@ -532,15 +536,15 @@ Normal operation is a spec loop followed by one autonomous closeout:
 
 ```text
 /deliver-spec <id>       # deliver one spec to human merge wait
-/close-sprint <sprint>   # close, assure, prepare and finalize the Sprint release
+/close-sprint <sprint>   # Sprint-closure gate: verify integrated candidate + full Security Assurance, draft notes (no release)
 
 # Optional, less common shortcut:
-/deliver-sprint <sprint> # deliver every spec, then run the same complete closeout
+/deliver-sprint <sprint> # deliver every spec, then run the same Sprint-closure gate
 ```
 
 The granular commands below are internal phase contracts and recovery entry points, not a
-required operator ceremony. During normal operation the operator never invokes `/split-spec`,
-`/build`, `/qa`, or `/release`.
+required operator ceremony. During normal delivery the operator never invokes `/split-spec`,
+`/build`, or `/qa`; releasing is a separate, explicit owner decision made with `/release`.
 
 Two edges are handled without leaving the top-level command:
 
@@ -946,8 +950,8 @@ A critical hotfix never receives `SECURITY_VERIFIED` from risk acceptance alone.
 | Command | Purpose |
 |---|---|
 | `/deliver-spec` | first auto-reconciles any prior merged-but-unreconciled slice, then advances one spec automatically to the human merge wait |
-| `/deliver-sprint` | optional whole-Sprint loop: advances all committed specs, then runs `/close-sprint` internally |
-| `/close-sprint` | normal post-spec command: reconciles, closes, assures, prepares and finalizes the release; resume the same command after protected-branch merge waits |
+| `/deliver-sprint` | optional whole-Sprint loop: advances all committed specs, then runs the `/close-sprint` closure gate internally (no release) |
+| `/close-sprint` | normal post-spec Sprint-closure gate: reconciles, verifies the integrated candidate (heavy assembled-system battery + full Security Assurance, different from the per-slice tests), auto-fixes in scope, drafts release notes, records the `CLOSED`/`INCOMPLETE` result. No release work. |
 | `/security-assurance` | internal/recovery entry for the heavy security worker |
 | `/spec` | creates or refines a specification |
 | `/design-slice` | creates the slice plan |
@@ -957,7 +961,7 @@ A critical hotfix never receives `SECURITY_VERIFIED` from risk acceptance alone.
 | `/pr` | prepares and opens a Pull Request |
 | `/review-pr` | reviews a PR in read-only mode |
 | `/fix-pr` | performs one correction round |
-| `/release` | expert/support entry for out-of-band releases; routine Sprint release is internal to `/close-sprint` |
+| `/release` | owner-driven release command (a closed Sprint or an out-of-band change): prepares versioning, changelog, security assurance, and the release PR |
 | `/hotfix` | conducts a staged hotfix |
 | `/workflow-status` | reads workflow state |
 | `/reconcile-workflow` | manual fallback that reconciles the final slice or any drift; routine closeout runs automatically at the next `/deliver-spec`, `/close-sprint` or `/release` |
@@ -996,6 +1000,7 @@ REVIEW_FINDINGS
 AWAITING_HUMAN_MERGE
 SPRINT_DELIVERED
 SPRINT_CLOSED
+SPRINT_INCOMPLETE
 SECURITY_NOT_APPLICABLE
 SECURITY_VERIFIED
 SECURITY_OBSERVATIONS
@@ -1066,41 +1071,52 @@ The result is a Block Report, not an infinite attempt loop.
 
 # Sprint closure
 
-At the end of a Sprint run `/close-sprint <sprint>`. This is the only routine post-spec command. It
-sweeps any merged-but-unreconciled slice —
-the Sprint's last-slice edge, which has no later `/deliver-spec` to trigger it — into `IMPLEMENTED`
-at the real merge instant (ROADMAP `Done ☑` + `Completed`, durable plan moved to
-`docs/exec-plans/completed/`), reconciles evidence, runs release verification, invokes Security
-Assurance automatically when applicable, writes a concise durable closure report, prepares the
-release and continues through finalization. It never hands the operator off to `/release`.
-Protected-branch merges remain human-only; resume the same `/close-sprint` command afterward.
-The report records auditable outcomes and exceptions, not a mandatory phase diary or token log.
+At the end of a Sprint run `/close-sprint <sprint>`. This is the only routine post-spec command and
+an autonomous **closure gate**: *were the committed Sprint outcomes delivered and verified as an
+integrated whole?* It sweeps any merged-but-unreconciled slice — the Sprint's last-slice edge, which
+has no later `/deliver-spec` to trigger it — into `IMPLEMENTED` at the real merge instant (ROADMAP
+`Done ☑` + `Completed`, durable plan moved to `docs/exec-plans/completed/`), confirms every
+committed spec is merged with its per-slice evidence still valid, then brings up the integrated
+candidate and runs a heavier, **different** battery than any single `/deliver-spec` — over the
+assembled system, never a mechanical repeat of the per-slice tests: the complete cross-spec journey,
+the full Security Assurance track (DAST, secrets, SCA, licenses, containers, IaC, the authorization
+matrix, endpoint exposure, security headers), architecture and dependencies, cross-cutting
+concurrency, resilience under failure, combined migrations, applicable financial controls, and full
+regression. It auto-fixes in-scope defects and re-runs only the affected controls, records a short
+verdict and a minimal `CLOSED`/`INCOMPLETE` result in `docs/ROADMAP.md`, and drafts concise
+product-facing release notes at `docs/release-notes/<sprint>.md`. It performs no release work — no
+versioning, release branch, tag, GitHub Release, or `main`-merge wait; drafting notes neither
+authorizes nor implies a release — and returns no follow-up command. Releasing is a separate,
+owner-driven decision made with `/release`; the owner handles protected-branch merges, tags, and
+GitHub Releases by hand.
 
 ```text
-We are closing the Sprint.
+We are running the Sprint-closure gate.
 
-Analyze:
-- Sprint Goal;
-- committed specs;
-- merges to develop;
-- open PRs;
-- QA;
-- CI;
-- bugs;
-- rework;
-- decisions;
-- blockers or waived gates.
+Reconcile the delivered specs, then bring up the integrated candidate and verify the assembled
+system — NOT a mechanical repeat of each /deliver-spec:
+- complete journey crossing all specs;
+- full Security Assurance: DAST against the real stack, secrets, SCA and vulnerabilities, licenses,
+  container images, Dockerfiles and Compose/IaC, authorization matrix, endpoint exposure, security
+  headers;
+- architecture and dependencies;
+- cross-cutting concurrency, resilience under failure;
+- database integrity and combined migrations;
+- applicable financial controls;
+- full regression on the integrated candidate.
+Auto-fix what is in scope, re-run only the affected controls.
 
-Produce:
-1. goal achieved or not;
-2. completed items;
-3. incomplete items;
-4. proposed carry-over;
-5. findings;
-6. verification and Security Assurance verdict.
+Record:
+1. docs/ROADMAP.md — Status CLOSED/INCOMPLETE, Closed (UTC) when CLOSED, Goal ACHIEVED/NOT_ACHIEVED,
+   carry-over spec IDs, blocking finding IDs;
+2. docs/release-notes/<sprint>.md — a concise product-facing draft (Sprint name and goal, delivered
+   capabilities, user-visible and operational changes, real known limitations, integrated candidate
+   SHA, Sprint Assurance verdict, evidence location). No version, tag, publication, or main-merge —
+   a draft is not a release.
 ```
 
-A spec is delivered only after it is merged with the applicable gates.
+A spec is delivered only after it is merged with the applicable gates. Releasing a closed Sprint is
+a later, explicit owner decision made with `/release`, which may reuse the closure draft.
 
 ---
 

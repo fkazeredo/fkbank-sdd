@@ -40,13 +40,21 @@ Recovery: /spec /design-slice /approve-plan /build /qa /pr /review-pr /fix-pr
 Support: /release /hotfix /adr /spike /impact · Drift/fallback (recovery only): /workflow-status /reconcile-workflow
 ```
 
-`/close-sprint` owns the whole post-delivery path: final reconcile, verification, applicable
-security assurance, closure evidence, release preparation, release PR, waiting for the protected
-`main` merge, tag/GitHub Release, and the post-release sync PR. It composes `/release` internally;
-the operator is never told to invoke `/release` as the next routine Sprint step. If a protected
-branch merge requires the human, resume with the same `/close-sprint <sprint> --resume` command.
-`/deliver-sprint` is only a convenience for the rare case where the operator wants every committed
-spec delivered in one loop; after the last merge it automatically executes this same closeout.
+`/close-sprint` is an autonomous Sprint-closure gate. It answers one question — *were the committed
+Sprint outcomes delivered and verified as an integrated whole?* — by reconciling the final merged
+slice, bringing up the integrated candidate, and running a heavier, different battery than any
+single `/deliver-spec` ran over the assembled system: the complete cross-spec journey, the full
+Security Assurance track, combined migrations, cross-cutting concurrency and resilience, and full
+regression. It auto-fixes in-scope defects and re-runs only the affected controls, records a short
+verdict and a minimal `CLOSED`/`INCOMPLETE` result in `docs/ROADMAP.md`, and drafts concise
+product-facing release notes at `docs/release-notes/<sprint>.md`. It performs **no** release work:
+drafting notes neither authorizes nor implies a release, and it never derives a version, prepares a
+release, waits for a `main` merge, tags, publishes a GitHub Release, opens a sync PR, or
+composes/returns `/release`. Releasing is a separate, owner-driven decision — the operator runs
+`/release` manually when they choose to release, and handles protected-branch merges, tags, and
+GitHub Releases by hand. `/deliver-sprint` is only a convenience for the rare case where the
+operator wants every committed spec delivered in one loop; after the last merge it automatically
+runs this same closure gate.
 
 - Every skill begins by reading `.claude/rules/workflow-conventions.md`.
 - Risk drives process (R0–R4): see `.claude/rules/risk-model.md`. Every versioned change

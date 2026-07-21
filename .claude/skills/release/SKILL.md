@@ -6,9 +6,10 @@ disable-model-invocation: true
 
 # /release <version> [--production]
 
-This remains an expert/support entry point for an out-of-band release. Normal Sprint delivery
-does not ask the operator to invoke it: `/close-sprint` composes this contract internally and
-retains ownership of the resume command across protected-branch merge waits.
+This is the operator-driven release command. `/close-sprint` does **not** compose or trigger it:
+Sprint closure only verifies delivery, and releasing is a separate decision the owner makes and
+invokes explicitly here (whether releasing a closed Sprint or an out-of-band change). The owner
+handles the protected-branch merges, tags, and GitHub Releases this contract prepares.
 
 Read `.claude/rules/workflow-conventions.md` and `.claude/rules/security-gate.md` first.
 Role: `releaser`. Auto-detect the step by state. Without `--production`, this is an

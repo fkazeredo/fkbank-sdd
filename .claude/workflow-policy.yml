@@ -63,11 +63,11 @@ state_machine:
   operator_commands:
     deliver_spec: /deliver-spec
     close_sprint: /close-sprint
-    deliver_sprint: /deliver-sprint       # optional whole-Sprint loop; includes close_sprint
+    deliver_sprint: /deliver-sprint       # optional whole-Sprint loop; ends with the close_sprint check
   normal_operator_flow:
     - /deliver-spec                       # repeat per spec
-    - /close-sprint                       # includes release prepare/finalize
-  close_sprint_owns_release: true
+    - /close-sprint                       # Sprint-closure gate (heavy assembled-system battery + Security Assurance + draft notes); no release work
+  close_sprint_owns_release: false        # /close-sprint verifies the integrated candidate and drafts notes; /release is a separate owner-driven command
   automatic_workers:
     qa: qa-engineer
     review: pr-reviewer

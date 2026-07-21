@@ -109,6 +109,15 @@ auto-reconciles any prior merged-but-unreconciled slice — ticking its `Done` �
 and `/release` run the same reconcile-sweep so the last slice (which has no subsequent `/deliver-spec`)
 is closed out; `/reconcile-workflow` remains the manual fallback for the final slice or any drift.
 
+At Sprint closure, `/close-sprint` is an autonomous closure gate — it verifies the committed Sprint
+outcomes as an integrated whole with a heavier battery than any per-slice run (assembled cross-spec
+journey, complete Security Assurance, combined migrations, regression), auto-fixes in-scope defects,
+records the Sprint-level result in `docs/ROADMAP.md` (Sprint `Status` CLOSED/INCOMPLETE · `Closed`
+UTC when closed · `Goal` ACHIEVED/NOT_ACHIEVED · `Carry-over` spec IDs · `Blocking` finding IDs), and
+drafts concise product-facing release notes at `docs/release-notes/<sprint>.md`. It does no release
+work and writes no separate closure report; releasing is the owner's separate, manual `/release`
+decision.
+
 ## Hard limits (from .claude/workflow-policy.yml — never exceed, never negotiate)
 Ultracode orchestration has no repository-level numeric limits and needs no operator babysitting:
 xhigh dynamic workflows, agent teams, subagents, recursive orchestration, and background tasks are

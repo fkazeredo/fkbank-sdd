@@ -41,6 +41,13 @@ auto-reconciles the previous merged slice's `Done` ☑ + `Completed` from the re
 `/close-sprint` and `/release` sweep the last slice; `/reconcile-workflow` remains the manual fallback
 for the final slice or any drift. See `.claude/rules/workflow-conventions.md` §Spec state.
 
+When a Sprint is closed, the `/close-sprint` closure gate records the Sprint-level result inline
+under that Sprint's heading — `Status` (`CLOSED`/`INCOMPLETE`), `Closed` (canonical UTC, only when
+closed), `Goal` (`ACHIEVED`/`NOT_ACHIEVED`), `Carry-over` (spec IDs or `none`), `Blocking` (finding
+IDs or `none`) — and drafts concise product-facing release notes at `docs/release-notes/<sprint>.md`
+(e.g. `S1.md`). Those minimal fields plus the draft are the durable Sprint-closure record; there is
+no separate closure report, and closing a Sprint does no release work.
+
 ## Sprint 1
 
 **Outcome:** Walking skeleton observable from day one; the accounting heart proven by race
@@ -52,6 +59,12 @@ tests; a person opens an account and logs in.
 | 2 | ☑ | SPEC-0016 — observability baseline | R2 | sonnet | 20/07/2026 05:48:16 | 20/07/2026 08:21:11 | Ships only the observability mechanism (MDC propagation, structured logs) — no money or invariant surface touched (design-hardening option: see *Model allocation notes*); depends on SPEC-0018 |
 | 3 | ☑ | SPEC-0001 — ledger core | R3 | opus | 20/07/2026 08:48:05 | 20/07/2026 12:31:19 | Owns every ledger invariant: append-only postings, 4-decimal `Money` math, `FOR UPDATE` ascending-id race test, reversal-at-most-once |
 | 4 | ☑ | SPEC-0002 — sign-up & account | R3 | opus | 20/07/2026 12:35:08 | 20/07/2026 18:06:56 | Same-CPF race under real persistence, idempotent-by-CPF onboarding through bureau `delay`/`duplicate-webhook`, OIDC + PII |
+
+**Closure:** Status `CLOSED` · Goal `ACHIEVED` · Closed `2026-07-21T01:34:08Z` · Carry-over: none ·
+Blocking: none · Assurance `SECURITY_OBSERVATIONS` (candidate `e12711b`). Draft release notes:
+`docs/release-notes/S1.md`. Non-blocking pre-production security follow-ups (SEC-F-01, F-02, F-03,
+F-04) are tracked in `docs/security/DECISIONS.md`; the historical detail lives in
+`docs/qa/SPRINT-1-CLOSURE.md` and Git history.
 
 ## Sprint 2
 
@@ -182,6 +195,12 @@ decisions are recorded here:
 
 ## Release cadence
 
-One release per sprint after `/close-sprint`, then `/release` (internal pilot/pre-release — see the security gate
-in `.claude/rules/security-gate.md`; a production release additionally requires the
-approved security assurance track). SemVer set at Prepare; development on `-SNAPSHOT`.
+Sprint closure (`/close-sprint`) verifies the integrated candidate (heavy assembled-system battery +
+full Security Assurance) and drafts release notes at `docs/release-notes/<sprint>.md`, but it never
+releases, and a closed Sprint need not produce a release. Releasing is a separate, owner-driven
+decision: when the owner chooses to release a closed Sprint (or an out-of-band change) they invoke
+`/release` manually — reusing the closure draft — and handle the protected-branch merges, tags, and
+GitHub Releases by hand. `/release` is an internal
+pilot/pre-release by default — see the security gate in `.claude/rules/security-gate.md`; a
+production release additionally requires the approved security assurance track. SemVer set at
+Prepare; development on `-SNAPSHOT`.

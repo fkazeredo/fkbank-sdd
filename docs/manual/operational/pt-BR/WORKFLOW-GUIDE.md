@@ -205,9 +205,8 @@ flowchart LR
     P --> CI[CI autoritativo]
     CI --> R[Worker de review quando exigido]
     R --> M[Merge humano]
-    M --> C[/close-sprint/]
-    C --> SEC[Worker de Security Assurance quando aplicável]
-    SEC --> REL[Release]
+    M --> C[/close-sprint: portão de fechamento + Security Assurance/]
+    C --> REL[/release: decisão separada do dono/]
 ```
 
 Cada fase passa o bastão por artefatos persistentes:
@@ -221,7 +220,7 @@ spec
 → CI
 → relatório de review quando exigido
 → decisão humana
-→ fechamento da Sprint e relatório de segurança
+→ registro de fechamento da Sprint e rascunho de release notes
 ```
 
 A memória de uma conversa nunca é a única fonte do contexto.
@@ -324,8 +323,12 @@ O reviewer não edita, comenta automaticamente, aprova ou mergeia.
 
 ### `security-assurance-engineer`
 
-Worker independente de segurança da entrega final, acionado automaticamente por
-`/close-sprint` quando a Sprint contém trabalho R3/R4 ou a política o exige.
+Worker independente de segurança da entrega final, acionado automaticamente por `/close-sprint` no
+fechamento da Sprint (o track completo sobre o candidato integrado) e por `/release` para um
+candidato de release; o `/security-assurance` explícito é a entrada manual. Roda sempre que o
+candidato contém trabalho R3/R4 ou a política exige. É a bateria de segurança do sistema montado —
+DAST, secrets, SCA, licenças, containers, IaC, matriz de autorização, exposição de endpoints e
+headers — diferente dos testes por-spec que cada spec já rodou, nunca uma repetição mecânica.
 
 Responsabilidades:
 
@@ -388,8 +391,8 @@ Toda mudança versionada possui ao menos uma **Light Spec**.
 → worker de review isolado obrigatório
 → revisão humana
 → merge humano
-→ /close-sprint aciona security-assurance-engineer
-→ release
+→ /close-sprint roda o Security Assurance completo sobre o candidato integrado
+→ /release (conduzido pelo dono, separado)
 ```
 
 ---
@@ -535,15 +538,16 @@ A operação normal é um loop de specs seguido por um único fechamento autôno
 
 ```text
 /deliver-spec <id>       # entrega uma spec até a espera pelo merge humano
-/close-sprint <sprint>   # fecha, assegura, prepara e finaliza a release da Sprint
+/close-sprint <sprint>   # portão de fechamento: verifica candidato integrado + Security Assurance completo, rascunha notes (sem release)
 
 # Atalho opcional e menos comum:
-/deliver-sprint <sprint> # entrega todas as specs e executa o mesmo fechamento completo
+/deliver-sprint <sprint> # entrega todas as specs e executa o mesmo portão de fechamento
 ```
 
 Os comandos granulares abaixo são contratos internos e entradas de recuperação, não uma
-cerimônia obrigatória para o operador. Na operação normal o operador nunca invoca `/split-spec`,
-`/build`, `/qa` ou `/release`.
+cerimônia obrigatória para o operador. Na entrega normal o operador nunca invoca `/split-spec`,
+`/build` ou `/qa`; publicar uma release é uma decisão separada e explícita do dono, feita com
+`/release`.
 
 Duas bordas são tratadas sem sair do comando de topo:
 
@@ -949,8 +953,8 @@ Hotfix crítico não recebe `SECURITY_VERIFIED` por simples aceitação de risco
 | Comando | Finalidade |
 |---|---|
 | `/deliver-spec` | primeiro reconcilia automaticamente qualquer fatia anterior já mergeada e não reconciliada, depois avança uma spec até a espera pelo merge humano |
-| `/deliver-sprint` | loop opcional da Sprint inteira: avança todas as specs e executa `/close-sprint` internamente |
-| `/close-sprint` | comando normal pós-specs: reconcilia, fecha, assegura, prepara e finaliza a release; após merge protegido, retome o mesmo comando |
+| `/deliver-sprint` | loop opcional da Sprint inteira: avança todas as specs e executa o portão de fechamento `/close-sprint` internamente (sem release) |
+| `/close-sprint` | portão de fechamento normal pós-specs: reconcilia, verifica o candidato integrado (bateria pesada do sistema montado + Security Assurance completo, diferente dos testes por-spec), corrige no escopo, rascunha release notes, registra o resultado `CLOSED`/`INCOMPLETE`. Sem trabalho de release. |
 | `/security-assurance` | entrada interna/recuperação do worker de segurança pesada |
 | `/spec` | cria ou refina uma especificação |
 | `/design-slice` | cria o plano da fatia |
@@ -960,7 +964,7 @@ Hotfix crítico não recebe `SECURITY_VERIFIED` por simples aceitação de risco
 | `/pr` | prepara e abre Pull Request |
 | `/review-pr` | revisa PR em modo read-only |
 | `/fix-pr` | executa uma rodada de correção |
-| `/release` | entrada especializada para releases fora do fluxo; a release normal da Sprint é interna ao `/close-sprint` |
+| `/release` | comando de release conduzido pelo dono (uma Sprint fechada ou uma mudança fora do fluxo): prepara versionamento, changelog, security assurance e o PR de release |
 | `/hotfix` | conduz hotfix em estágios |
 | `/workflow-status` | consulta estado sem alterar arquivos |
 | `/reconcile-workflow` | fallback manual que reconcilia a última fatia ou desvios; o fechamento de rotina é automático no próximo `/deliver-spec`, `/close-sprint` ou `/release` |
@@ -999,6 +1003,7 @@ REVIEW_FINDINGS
 AWAITING_HUMAN_MERGE
 SPRINT_DELIVERED
 SPRINT_CLOSED
+SPRINT_INCOMPLETE
 SECURITY_NOT_APPLICABLE
 SECURITY_VERIFIED
 SECURITY_OBSERVATIONS
@@ -1069,42 +1074,54 @@ O resultado deve ser um Block Report, não uma tentativa infinita.
 
 # Fechamento da Sprint
 
-Ao final da Sprint, execute `/close-sprint <sprint>`. Esse é o único comando rotineiro após as specs.
-Ele varre qualquer fatia já mergeada mas ainda
-não reconciliada — o caso da última fatia da Sprint, que não tem `/deliver-spec` posterior para
-acioná-la — para `IMPLEMENTED` no instante real do merge (ROADMAP `Done ☑` + `Completed`, plano
-durável movido para `docs/exec-plans/completed/`), reconcilia evidências, roda a verificação de
-release, aciona Security Assurance automaticamente quando aplicável, grava um relatório durável
-conciso, prepara a release e segue até a finalização. Ele nunca transfere o operador para
-`/release`. Os merges de branches protegidas continuam humanos; depois deles, retome o mesmo
-`/close-sprint`. O relatório registra resultados auditáveis e exceções, não um diário obrigatório
-de fases, tokens ou compactações.
+Ao final da Sprint, execute `/close-sprint <sprint>`. Esse é o único comando rotineiro após as specs
+e um **portão de fechamento** autônomo: *os resultados comprometidos da Sprint foram entregues e
+verificados como um todo integrado?* Ele varre qualquer fatia já mergeada mas ainda não reconciliada
+— o caso da última fatia da Sprint, que não tem `/deliver-spec` posterior para acioná-la — para
+`IMPLEMENTED` no instante real do merge (ROADMAP `Done ☑` + `Completed`, plano durável movido para
+`docs/exec-plans/completed/`), confere que cada spec comprometida está mergeada com sua evidência
+por-fatia ainda válida, e então sobe o candidato integrado e roda uma bateria mais pesada e
+**diferente** da de qualquer `/deliver-spec` — sobre o sistema montado, nunca uma repetição mecânica
+dos testes por-fatia: a jornada completa cruzando todas as specs, o track completo de Security
+Assurance (DAST, secrets, SCA, licenças, containers, IaC, matriz de autorização, exposição de
+endpoints, headers), arquitetura e dependências, concorrência transversal, resiliência sob falha,
+migrations combinadas, controles financeiros aplicáveis e regressão completa. Ele corrige
+automaticamente defeitos no escopo e reexecuta apenas os controles afetados, registra um veredito
+curto e um resultado mínimo `CLOSED`/`INCOMPLETE` em `docs/ROADMAP.md`, e rascunha release notes
+concisas e voltadas ao produto em `docs/release-notes/<sprint>.md`. Ele não faz trabalho de release
+— sem versionamento, branch de release, tag, GitHub Release ou espera por merge em `main`; rascunhar
+notes não autoriza nem implica uma release — e não devolve nenhum comando seguinte. Publicar é uma
+decisão separada e conduzida pelo dono, feita com `/release`; o dono trata os merges de branches
+protegidas, as tags e os GitHub Releases à mão.
 
 ```text
-Estamos fechando a Sprint.
+Estamos rodando o portão de fechamento da Sprint.
 
-Analise:
-- Sprint Goal;
-- specs comprometidas;
-- merges em develop;
-- PRs abertas;
-- QA;
-- CI;
-- bugs;
-- rework;
-- decisões;
-- bloqueios ou gates dispensados.
+Reconcilie as specs entregues, então suba o candidato integrado e verifique o sistema montado —
+NÃO uma repetição mecânica de cada /deliver-spec:
+- jornada completa cruzando todas as specs;
+- Security Assurance completo: DAST contra o stack real, secrets, SCA e vulnerabilidades, licenças,
+  imagens de containers, Dockerfiles e Compose/IaC, matriz de autorização, exposição de endpoints,
+  headers de segurança;
+- arquitetura e dependências;
+- concorrência transversal, resiliência sob falha;
+- integridade do banco e migrations combinadas;
+- controles financeiros aplicáveis;
+- regressão completa no candidato integrado.
+Corrija o que estiver no escopo, reexecute apenas os controles afetados.
 
-Produza:
-1. objetivo alcançado ou não;
-2. concluídos;
-3. incompletos;
-4. carry-over;
-5. findings;
-6. verificação e veredito de Security Assurance.
+Registre:
+1. docs/ROADMAP.md — Status CLOSED/INCOMPLETE, Closed (UTC) quando CLOSED, Goal ACHIEVED/NOT_ACHIEVED,
+   IDs de specs em carry-over, IDs de findings bloqueantes;
+2. docs/release-notes/<sprint>.md — um rascunho conciso e voltado ao produto (nome e goal da Sprint,
+   capacidades entregues, mudanças visíveis ao usuário e operacionais, limitações reais conhecidas,
+   SHA do candidato integrado, veredito de Sprint Assurance, localização da evidência). Sem versão,
+   tag, publicação ou merge em main — um rascunho não é uma release.
 ```
 
-Uma spec só é considerada entregue depois de mergeada com os gates aplicáveis.
+Uma spec só é considerada entregue depois de mergeada com os gates aplicáveis. Publicar uma Sprint
+fechada é uma decisão posterior e explícita do dono, feita com `/release`, que pode reutilizar o
+rascunho do fechamento.
 
 ---
 

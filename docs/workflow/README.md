@@ -22,8 +22,8 @@ in `CLAUDE.md` applies.
 | Command | Outcome |
 |---|---|
 | `/deliver-spec <id> [--resume]` | validates and delivers one spec up to a real wait state |
-| `/deliver-sprint <sprint> [--resume]` | optional: delivers all committed specs, then closes and releases the Sprint |
-| `/close-sprint <sprint> [--resume]` | normal closeout after individual specs: reconcile, verify, assure, prepare and finalize the release |
+| `/deliver-sprint <sprint> [--resume]` | optional: delivers all committed specs, then runs the Sprint-closure gate (no release) |
+| `/close-sprint <sprint> [--resume]` | normal Sprint-closure gate after individual specs: reconcile, verify the integrated candidate (heavy assembled-system battery + full Security Assurance), draft release notes, record the closure result. No release work. |
 
 Granular commands such as `/design-slice`, `/build`, `/qa`, `/pr`, `/review-pr`,
 and `/release` are internal phase contracts and recovery entries. They are not mandatory operator
@@ -36,10 +36,18 @@ The routine operator flow is deliberately small:
 /close-sprint <sprint>
 ```
 
-`/close-sprint` does not hand the operator off to `/release`. It keeps ownership through release
-preparation and finalization. A protected-branch merge is the only normal human wait; after it,
-resume the same top-level command. `/deliver-sprint` is the less common one-command alternative
-that performs the spec loop and then delegates to the identical closeout.
+`/close-sprint` is an autonomous Sprint-closure gate — *were the committed Sprint outcomes
+delivered and verified as an integrated whole?* It reconciles the final merged slice, brings up the
+integrated candidate, and runs a heavier, different battery than any per-slice `/deliver-spec`: the
+complete cross-spec journey, the full Security Assurance track, combined migrations, cross-cutting
+concurrency and resilience, and full regression. It auto-fixes in-scope defects and re-runs only the
+affected controls, records a short verdict and a minimal `CLOSED`/`INCOMPLETE` result in
+`docs/ROADMAP.md`, and drafts concise product-facing release notes at `docs/release-notes/<sprint>.md`.
+It performs no release work — drafting notes neither authorizes nor implies a release — and returns
+no follow-up command. Releasing is a separate, owner-driven decision: the operator runs `/release`
+when they choose to release and handles protected-branch merges, tags, and GitHub Releases by hand.
+`/deliver-sprint` is the less common one-command alternative that performs the spec loop and then
+runs the identical closure gate.
 
 An oversized spec never proceeds silently. A binding implementation-fit gate runs before build;
 when a spec cannot fit one session it produces exactly one split proposal, waits for exactly one

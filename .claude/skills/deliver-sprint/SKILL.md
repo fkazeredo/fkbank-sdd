@@ -1,6 +1,6 @@
 ---
 name: deliver-sprint
-description: Optional whole-Sprint RELAY loop — delivers every committed spec sequentially and then executes the complete close-sprint/release path automatically. Idempotently resumable.
+description: Optional whole-Sprint RELAY loop — delivers every committed spec sequentially and then runs the close-sprint Sprint-closure gate (heavy assembled-system battery + full Security Assurance + draft release notes). It performs no release work; releasing stays the owner's separate manual decision. Idempotently resumable.
 disable-model-invocation: true
 ---
 
@@ -21,11 +21,14 @@ Sprint. Role: `orchestrator`.
    or human merge. `--resume` verifies evidence before continuing.
 5. A blocked prerequisite blocks dependent slices. An unrelated later slice may continue only
    when the Sprint manifest explicitly proves independence and the owner accepts the carry-over.
-6. After all committed slices have human merge evidence, invoke the `/close-sprint <sprint>`
-   contract internally and continue through its release wait/finalization states. The operator
-   does not issue a separate close or release command. When a human merge is required, resume the
-   whole operation with `/deliver-sprint <sprint> --resume`; it delegates to the persisted
-   close-sprint state without replaying completed slices.
+6. After all committed slices have human merge evidence, run the `/close-sprint <sprint>` contract
+   internally — the Sprint-closure gate that reconciles the final slice, brings up the integrated
+   candidate, runs the heavy assembled-system battery plus the complete Security Assurance track,
+   drafts the release notes, and records the minimal `CLOSED`/`INCOMPLETE` result in
+   `docs/ROADMAP.md`. Do no release work here: releasing is the owner's separate, manual `/release`
+   decision, never triggered by this loop. When a human merge on a spec is still required, resume the
+   whole operation with `/deliver-sprint <sprint> --resume`; it delegates to the persisted state
+   without replaying completed slices.
 
 Never change Sprint scope silently, merge, push protected branches, bypass independent phases,
 or convert missing evidence into success.

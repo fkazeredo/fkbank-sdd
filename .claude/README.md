@@ -8,8 +8,10 @@ This directory contains the executable RELAY workflow. Its human-readable index 
   `disable-model-invocation: true` (operators invoke top-level commands; those commands drive
   internal transitions and approved workers automatically).
   Routine operation is repeated `/deliver-spec` followed by one `/close-sprint`; that close command
-  composes release preparation/finalization internally. `/deliver-sprint` is the optional whole-Sprint
-  loop and includes the same closeout.
+  is the Sprint-closure gate: it verifies the integrated candidate with a heavy assembled-system
+  battery plus the full Security Assurance track, drafts product-facing release notes, and does no
+  release work — releasing is the owner's separate `/release`. `/deliver-sprint` is the optional
+  whole-Sprint loop and ends with the same closure gate.
 - **agents/** — independent QA, PR review, and security assurance roles. Ultracode may orchestrate
   them and any native/dynamic workers freely; these definitions preserve responsibilities and
   write boundaries, not topology or concurrency limits.

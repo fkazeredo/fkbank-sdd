@@ -8,7 +8,8 @@ disable-model-invocation: true
 
 Read workflow conventions, the security gate, workflow policy, and
 `docs/security/SECURITY-ASSURANCE-TRACK.md`. Role: `security`. Run as an independent assurance responsibility within Ultracode orchestration
-`security-assurance-engineer` worker selected automatically by closure orchestration.
+`security-assurance-engineer` worker selected automatically by Sprint-closure or release
+orchestration, or invoked explicitly here.
 
 ## Preconditions
 
@@ -47,4 +48,5 @@ missing mandatory pinned tool/profile returns `BLOCKED`; never downgrade it to a
   incomplete, or unresolved High/Critical finding.
 
 Never accept risk, alter production code, weaken tooling, test an undeclared external target,
-merge, or publish. End: `SESSION OVER -- next: /close-sprint <sprint> --resume`.
+merge, or publish. End: `SESSION OVER -- next: /close-sprint <sprint> --resume` or
+`/release <version> --resume`, per the candidate this assurance covered.
