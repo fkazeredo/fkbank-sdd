@@ -15,8 +15,9 @@ Verdicts: SECURITY_NOT_APPLICABLE · SECURITY_VERIFIED · SECURITY_OBSERVATIONS 
   orchestrator runs the heavy wrapper; the independent `security-assurance-engineer` worker judges
   the evidence and issues the verdict); `/release` runs it — or reuses a matching exact-candidate
   verdict — for the release candidate; an explicit `/security-assurance` is the manual entry.
-  Internal candidates may end in `SECURITY_OBSERVATIONS` only with a recorded owner risk decision.
-  Production requires `SECURITY_VERIFIED` on the exact candidate SHA.
+  Internal candidates may end in `SECURITY_OBSERVATIONS` when every observation is Low/Medium,
+  policy-bounded, and has an owner and deadline; only material residual risk requires a recorded
+  owner decision. Production requires `SECURITY_VERIFIED` on the exact candidate SHA.
 - Risk acceptance NEVER produces `SECURITY_VERIFIED` — that state is reserved for the track
   actually executed.
 - Production release definition: destined for an environment exposed to end users; every

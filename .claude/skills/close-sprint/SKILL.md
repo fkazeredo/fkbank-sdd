@@ -167,9 +167,10 @@ to invoke `/release`, `/security-assurance`, `/reconcile-workflow`, `/workflow-s
 
 Reconciling a merged spec, bringing up the integrated candidate, reusing or running verification and
 the Security Assurance track, auto-fixing an in-scope defect, updating the Roadmap, drafting the
-release notes, and creating the local closure commit are ordinary autonomous execution. Pushing a
-branch or opening a Pull Request is optional repository housekeeping and is never required to claim
-the Sprint closure verdict.
+release notes, and creating the local closure commit are ordinary autonomous execution. Record the
+tested integrated code SHA as `candidate_sha` and the later documentation commit as
+`closure_commit`; they are distinct values. Pushing a branch or opening a Pull Request is optional
+repository housekeeping and is never required to claim the Sprint closure verdict.
 
 ## Terminal states and resume
 

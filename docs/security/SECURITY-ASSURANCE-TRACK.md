@@ -50,8 +50,10 @@ authoritative. Until a wrapper exists for an applicable mandatory control, the v
 
 - `SECURITY_VERIFIED`: all applicable mandatory controls executed on the exact candidate and
   no unresolved High/Critical finding exists.
-- `SECURITY_OBSERVATIONS`: permitted only for an internal/non-production candidate with an
-  explicit owner decision and bounded remediation records.
+- `SECURITY_OBSERVATIONS`: permitted only for an internal/non-production candidate when every
+  observation is Low/Medium, policy-bounded, and has an owner and deadline. An explicit owner
+  decision is required only for material residual product, financial, privacy, or exploitability
+  risk.
 - `BLOCKED`: missing approval/evidence/environment/control, mandatory skipped control, stale
   candidate, or unresolved High/Critical finding.
 

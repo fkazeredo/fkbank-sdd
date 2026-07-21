@@ -1,6 +1,6 @@
 ---
 name: release
-description: RELAY support — first runs the reconcile-sweep to close out any merged-but-unreconciled slice (typically the Sprint's last, which has no subsequent /deliver-spec), then release Prepare/Finalize with SemVer, changelog consolidation, security gate, human merges and tagging only after main merge. Manual invocation only.
+description: RELAY support — reconciles merged-but-unreconciled slices, then assists with owner-controlled release preparation and finalization. It never tags, pushes, merges, or publishes. Manual invocation only.
 disable-model-invocation: true
 ---
 
@@ -29,9 +29,10 @@ internal pilot/pre-release (see the production definition in workflow-policy.yml
 2. **Security gate:** release contains ≥1 R3/R4 slice?
    - No ⇒ record `SECURITY_NOT_APPLICABLE` + justification in the release notes.
    - Yes + track not approved + `--production` ⇒ **BLOCKED** (production waits for the
-     approved track). Yes + internal ⇒ HUMAN_DECISION_REQUIRED: present the risk, record
-     the human decision, state `SECURITY_OBSERVATIONS`. Never write SECURITY_VERIFIED
-     without the track executed.
+     approved track). Yes + internal ⇒ continue when observations are Low/Medium, policy-bounded,
+     continue when observations are Low/Medium, policy-bounded, and have an owner and deadline;
+     request one decision only for material residual risk. Never write SECURITY_VERIFIED without
+     the track executed.
 3. Branch `release/x.y.z` → set version (`tools/release/set-version`) removing `-SNAPSHOT`
    → consolidate CHANGELOG `[Unreleased]` → `## [x.y.z] - date` (new empty `[Unreleased]`
    above; history never deleted) → narrative release note in `docs/release-notes/` →
@@ -47,4 +48,4 @@ create the post-release version/synchronization branch. This command never perfo
 Tag or push anything · publish a GitHub Release · merge any PR · move/delete a published tag ·
 create a post-release synchronization branch · weaken the security gate.
 
-End: `SESSION OVER — next: human merge (main)` or `human merge (develop sync)`.
+End: `SESSION OVER — next: owner-controlled release actions`.
