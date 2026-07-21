@@ -95,7 +95,7 @@ class RoutePermissionCompletenessIT {
     try {
       HttpResponse<String> response =
           client.send(
-              HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + port + route))
+              HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + port + probeable(route)))
                   .timeout(Duration.ofSeconds(15))
                   .GET()
                   .build(),
@@ -107,6 +107,17 @@ class RoutePermissionCompletenessIT {
     } catch (Exception exception) {
       throw new IllegalStateException("could not probe " + route, exception);
     }
+  }
+
+  /**
+   * A path template such as {@code /api/statement/receipts/{postingId}} is not itself a URI:
+   * {@code {}} are illegal there. What is being proven is whether the security filter chain
+   * demands authentication before a request ever reaches a handler, which happens the same way
+   * regardless of which value fills the variable — so any placeholder segment probes the route
+   * exactly as well as the real value would.
+   */
+  private static String probeable(String route) {
+    return route.replaceAll("\\{[^}]+}", "probe-value");
   }
 
   /**

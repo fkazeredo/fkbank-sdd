@@ -1,6 +1,7 @@
 package com.fkbank.application.api;
 
 import com.fkbank.domain.account.UnknownAccountException;
+import com.fkbank.domain.account.UnknownReceiptException;
 import com.fkbank.domain.customer.DuplicateCustomerException;
 import com.fkbank.domain.customer.UnderageCustomerException;
 import com.fkbank.domain.identity.WeakPasswordException;
@@ -54,11 +55,12 @@ class ApiErrorHandler {
     return problem(HttpStatus.UNPROCESSABLE_CONTENT, codeOf(refusal), refusal.getMessage());
   }
 
-  /** No application or account exists behind the identifier that was asked for. */
+  /** No application, account or receipt exists behind the identifier that was asked for. */
   @ExceptionHandler({
     UnknownOnboardingException.class,
     UnknownBureauReferenceException.class,
-    UnknownAccountException.class
+    UnknownAccountException.class,
+    UnknownReceiptException.class
   })
   ProblemDetail notFound(RuntimeException refusal) {
     return problem(HttpStatus.NOT_FOUND, codeOf(refusal), refusal.getMessage());
@@ -124,6 +126,9 @@ class ApiErrorHandler {
     }
     if (refusal instanceof UnknownAccountException) {
       return UnknownAccountException.CODE;
+    }
+    if (refusal instanceof UnknownReceiptException receipt) {
+      return receipt.code();
     }
     return "INVALID_SUBMISSION";
   }
