@@ -13,6 +13,8 @@ area. The banking features themselves arrive in later releases, and this page gr
 
 A few things worth knowing before you start:
 
+- **Enter your full name — first and family name.** A single word is not enough; the bureau
+  matches your whole legal name. The form tells you before you submit if something is missing.
 - **Your CPF can be typed either way.** `123.456.789-09` and `12345678909` are the same number to
   us. It is checked as you type, so a mistyped digit is caught before you submit.
 - **Your e-mail address is what you will sign in with.** It has to be one no other FKBANK account

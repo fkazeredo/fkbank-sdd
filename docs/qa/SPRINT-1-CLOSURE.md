@@ -1,7 +1,7 @@
 # Sprint 1 — closure report
 
-Candidate: `3dec822` on `release/0.1.0` (assurance ran here; see §6 for the SHA the release
-actually carries). Closed 2026-07-20. Release class: **internal pilot / pre-release**.
+Candidate: `e12711b` on `release/0.1.0` — the SHA the release carries, with the final assurance
+verdict on it (see §4). Closed 2026-07-20. Release class: **internal pilot / pre-release**.
 
 ## 1. Goal and outcome
 
@@ -37,19 +37,34 @@ Nothing was carried out of Sprint 1 incomplete. Sprint 2 scope is unchanged.
 
 ## 4. Security assurance
 
-**Verdict: `SECURITY_OBSERVATIONS`** on `3dec822` — `docs/security/reports/SPRINT-1-3dec822.md`.
+**Verdict: `SECURITY_OBSERVATIONS`** on the release candidate `e12711b` —
+`docs/security/reports/SPRINT-1-e12711b.md`.
 
-Three runs were needed, and the first two failed for reasons worth keeping:
+It took five runs. Each failure was real and is worth keeping, because every one of them was a
+control that would have certified something false if left unexamined:
 
 | Run | SHA | Verdict | Why |
 |---|---|---|---|
-| 1 | `d9aad61` | BLOCKED | Family 6 (DAST) **NOT_EXECUTED** — `compose.security.yaml` health-checked the backend with `curl`, which the JRE-on-Alpine runtime image does not ship. The stack never came up; no scan had ever run. |
-| 2 | `068d94f` | BLOCKED | Family 6 executed for the first time and **failed four gating rules**: no CSP, nothing forbidding framing, no `nosniff`, no `Permissions-Policy`. |
-| 3 | `3dec822` | SECURITY_OBSERVATIONS | Gating rules closed and verified across fifteen path classes; every applicable mandatory control executed. |
+| 1 | `d9aad61` | BLOCKED | Family 6 (DAST) **NOT_EXECUTED** — `compose.security.yaml` health-checked the backend with `curl`, absent from the JRE-on-Alpine image. The stack never came up; no scan had ever run, on any candidate. |
+| 2 | `068d94f` | BLOCKED | Family 6 executed for the first time and **failed four gating rules**: no CSP, nothing forbidding framing, no `nosniff`, no `Permissions-Policy`. Fixed by adding the edge security headers. |
+| 3 | `3dec822` | SECURITY_OBSERVATIONS | Gating rules closed, verified across fifteen path classes; every applicable mandatory control executed. |
+| 4 | `61631c3` | (no verdict) | The subagent worker ended before its own ~15-min wrapper finished and produced no verdict — a subagent's budget does not span the wrapper. No result to trust. |
+| 5 | `e12711b` | **SECURITY_OBSERVATIONS** | The orchestrator ran the deterministic wrapper to completion; an independent worker judged the produced evidence and issued the verdict. Every discrimination check passed. |
+
+Two things surfaced only because run 5 actually executed on the final candidate rather than
+carrying run 3 forward:
+
+- Run 5's first attempt (on `61631c3`) **failed `verify-release`**: an age-boundary acceptance
+  test built its boundary birth date from `LocalDate.now()` (the JVM's Brasília zone) while the
+  server evaluates age in UTC. After 21:00 BRT the two name different days and the boundary
+  flipped — green in a UTC-clocked CI, red here. Fixed in `e12711b` (§7).
+- The final DAST executed on a candidate that includes the F-01 fix; run 3's edge result could
+  not be carried because the product's frontend had changed.
 
 `SECURITY_VERIFIED` is unavailable, and this is not a technicality: family 3's
-repository-configuration control **fails** on the exact candidate. That is the consequence the
-owner accepted knowingly in `SEC-0001` (`docs/security/DECISIONS.md`).
+repository-configuration control **fails** on the exact candidate (no branch protection), and
+there is no CI on the exact SHA until the release PR puts it on `origin`. The branch-protection
+gap is the consequence the owner accepted knowingly in `SEC-0001` (`docs/security/DECISIONS.md`).
 
 Three things stand between this project and a clean `SECURITY_VERIFIED`: configure rulesets on
 `main` and `develop`, publish the candidate branch and get CI green on the exact SHA, and re-run
@@ -58,7 +73,7 @@ sprint** rather than before production — it is a settings change, not code.
 
 ## 5. Failed or waived gates
 
-Six, each recorded because a closure report that lists only successes is not evidence.
+Seven, each recorded because a closure report that lists only successes is not evidence.
 
 **5.1 — The mandatory R3 review of SPEC-0002 never ran before the merge.** PR #10 has zero
 reviews, no review report existed, and the slice's state recorded no `review_verdict`, while all
@@ -95,28 +110,49 @@ before recording a pass. Run 3 confirmed the wrapper and the evidence now agree.
 owner at the time and recorded as DL-0019 in that spec. Noted here so the exception is visible
 at sprint level rather than only inside the slice.
 
+**5.7 — An environment-flaky test passed CI and failed the release verification.** The
+SPEC-0002 age-boundary acceptance test built its boundary birth dates from `LocalDate.now()`
+(the JVM's default zone) while the server evaluates age in UTC. CI runs in UTC, so the two
+agreed and the test was green; the release verification ran on the Brasília-clocked operator
+machine after 21:00, where UTC has already rolled to the next day, and the boundary flipped
+(expected `422`, got `201`). A test whose result depends on the wall-clock zone is not a gate,
+it is a coin that lands heads in CI. Fixed in `e12711b` — the test now reads
+`LocalDate.now(ZoneOffset.UTC)`, matching the server. The deeper product question (which civil
+timezone defines coming-of-age) is F-02.
+
 ## 6. The SHA this verdict covers
 
-The assurance verdict was reached on `3dec822`. Two commits follow it in this closure —
-`c7980c6` (assurance report and the `SEC-0001` amendment) and the release Prepare commit. The
-assurance engineer set the condition explicitly: **the verdict carries forward only if the delta
-is limited to version metadata, the changelog and assurance documents.** Any change to source,
-configuration, `Dockerfile`, compose or a dependency manifest voids it and requires re-execution.
-That condition holds for the commits above; it must be re-checked if anything else lands on this
-branch before the release.
+The final assurance verdict was reached on **`e12711b`**, the release-candidate tip, not carried
+forward from an earlier SHA. Run 3 (`3dec822`) had set the carry-forward condition explicitly —
+the verdict holds only if the later delta is limited to version metadata, changelog and assurance
+documents. That condition was **not** met: the F-01 fix (`ea4e1ed`) changed production frontend
+code, which voided the carry and forced a real re-run. So the track re-executed end to end on the
+candidate that actually ships. The one coverage limit the re-run declared openly: automated SAST
+(CodeQL) did not run on the exact SHA because the branch is not yet on `origin` — the changed
+frontend was reviewed by hand instead, and CI on the exact SHA arrives when the release PR pushes
+the branch. Any further commit to this branch before the merge re-opens the same question.
 
 ## 7. Carry-over into Sprint 2
 
 Nothing here blocks the internal pilot. Both independent workers said so on their own evidence,
 and no Critical finding exists.
 
+**Fixed during closure**, before the release, on the owner's instruction:
+
+- **F-01 (was High) — fixed in `ea4e1ed`.** A rejected sign-up rendered a general "review the
+  details" with no field highlighted: the frontend read the 422 looking for an `errors` array
+  that Spring's flat `ProblemDetail` never sends, and the full-name field accepted a one-word
+  name the server then refused. The frontend now reads the `code`/`detail` a 422 actually
+  carries and mirrors the server's full-name rule inline. Its service tests had asserted the
+  invented body shape and so passed against the wrong contract; they now assert the real shape.
+  Verified: frontend unit 109/109, lint clean, verify-e2e 8/8.
+
 **Required before any production, end-user-facing release:**
 
 | ID | Sev | What |
 |---|---|---|
-| F-01 | High | A `422` renders "review the details below" with no field errors: the frontend probes for `errors`/`properties.errors`, which Spring's flat `ProblemDetail` never emits. Full name `Bob` passes the frontend's `minLength(2)` but fails the backend's `FullName` (≥3 chars **and** a space) — a permanent dead-end with nothing on screen explaining it. |
 | SEC-F-01 | Medium | Raw CPF reaches application logs through `org.hibernate.orm.jdbc.error` on the duplicate-CPF path, bypassing the app's own `Cpf.masked()` discipline. `application-prod.yml` does not downgrade that logger, so it applies in production. An unauthenticated caller chooses which CPFs get written. CWE-532. |
-| F-02 | Medium | The leap-day coming-of-age rule is backend-only. Born `2008-02-29`, on `2026-02-28` the backend says adult and the frontend says underage — the form blocks and the request is never sent. `todayAsIsoDate` also uses browser-local time against a UTC backend. |
+| F-02 | Medium | The coming-of-age timezone is unsettled across layers, and it is never convention in a bank. The backend evaluates age in **UTC**; the frontend uses browser-local time; the leap-day rule (born `2008-02-29`, adult on `2026-02-28`) is enforced backend-only. The age-boundary **test** flakiness (§5.7) was one symptom, now fixed by matching the test to the backend's UTC — but which civil timezone *should* define adulthood (UTC vs America/Sao_Paulo) is an owner decision, not the test's to settle. |
 | F-03 | Medium | BR-1's e-mail uniqueness is unenforced while an application is `PENDING`. Two CPFs sharing one e-mail both reach approval; the second violates `customer.email UNIQUE`, returning 409 **to the bureau**, rolling back settlement and stranding the onboarding in `PENDING`. CPF has a partial unique index for this window; e-mail has none, and no test covers it. |
 | F-04 | Medium | A stranded `PENDING` application has no recovery path: the bureau decision runs only on a fresh insert, resubmission short-circuits, and no scheduled retry or expiry exists. With the V5 index that CPF can then never open an account — the failure the async design was recorded as preventing. |
 
@@ -143,13 +179,16 @@ diagnosed with the exact cause.
 
 ## 8. Evidence index
 
-- Assurance reports: `docs/security/reports/SPRINT-1-{d9aad61,068d94f,3dec822}.md`
+- Assurance reports: `docs/security/reports/SPRINT-1-{d9aad61,068d94f,3dec822,e12711b}.md`
+  (the last is the verdict of record)
 - Risk acceptance: `docs/security/DECISIONS.md` — `SEC-0001`
 - Post-hoc review: `.claude/runtime/SPEC-0002/review-report.md`
 - QA reports: `.claude/runtime/SPEC-{0018,0016,0002}/qa-report.md`, `docs/qa/QA-0001.md`
 - Test books: `docs/tests/TB-{0018,0016,0001,0002}.md`
 - Verification logs: `.claude/runtime/verify-release-sprint1.log`,
-  `.claude/runtime/verify-e2e-headers.log`
+  `.claude/runtime/verify-e2e-headers.log`, `.claude/runtime/verify-e2e-f01.log`,
+  `.claude/runtime/security-candidate/verify-assurance.log` (+ `controls.txt`, ZAP reports)
+- Release: `docs/release-notes/0.1.0.md`, `docs/CHANGELOG.md` §[0.1.0]
 - Owner decisions taken during closure: `.claude/runtime/SPRINT-1/decision-request.md`
 - ADRs from this sprint: `docs/adr/ADR-0001-ledger-dependencies.md`,
   `docs/adr/ADR-0002-emulator-service-pattern.md`
