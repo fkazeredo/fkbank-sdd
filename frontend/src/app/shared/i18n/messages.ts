@@ -46,7 +46,8 @@ export const messages = {
 
   // Field-level validation messages.
   'signup.error.fullName.required': 'Tell us your full name.',
-  'signup.error.fullName.tooShort': 'Please enter your full name.',
+  'signup.error.fullName.tooShort': 'Your name looks too short.',
+  'signup.error.fullName.incomplete': 'Please enter your full name, including your family name.',
   'signup.error.cpf.required': 'Your CPF is required.',
   'signup.error.cpf.invalid': 'That is not a valid CPF.',
   'signup.error.email.required': 'Your e-mail is required.',

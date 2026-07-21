@@ -27,6 +27,18 @@ export interface Onboarding {
 }
 
 /**
+ * What the server said when it rejected a submission's contents.
+ *
+ * The 422 arrives as a flat problem+json document: a stable {@link code} the screen can pin to a
+ * field, and a human-readable {@link detail} to fall back on when it cannot. There is no
+ * per-field breakdown, so neither is assumed present.
+ */
+export interface SubmissionProblem {
+  readonly code: string | null;
+  readonly detail: string | null;
+}
+
+/**
  * What a submission amounted to, in the terms the screen actually reacts to.
  *
  * The screen branches on this and never on a status code, which keeps the transport shape in
@@ -38,7 +50,7 @@ export type SignupOutcome =
   | { readonly kind: 'rejected'; readonly onboarding: Onboarding }
   | { readonly kind: 'pending'; readonly onboarding: Onboarding }
   | { readonly kind: 'duplicate' }
-  | { readonly kind: 'invalid'; readonly fieldErrors: Readonly<Record<string, string>> }
+  | { readonly kind: 'invalid'; readonly problem: SubmissionProblem }
   | { readonly kind: 'failed' };
 
 /** Status code returned when the CPF or e-mail already belongs to a customer. */
@@ -48,52 +60,23 @@ const CONFLICT = 409;
 const UNPROCESSABLE = 422;
 
 /**
- * Reads field-level messages out of an error payload.
+ * Reads the code and detail out of a problem+json validation response.
  *
- * The shape is probed rather than assumed. A validation response that arrives in an
- * unrecognised form yields no field errors, and the screen falls back to a general message —
- * far better than surfacing a raw payload or dropping the response on the floor.
+ * The server answers a 422 with a flat problem document — a stable `code` and a human-readable
+ * `detail`, with no per-field breakdown. Both are read defensively: a response that arrives in
+ * an unexpected shape yields nulls, and the screen falls back to a general message rather than
+ * surfacing a raw payload or leaving the person with nothing to act on.
  */
-function readFieldErrors(payload: unknown): Record<string, string> {
+function readProblem(payload: unknown): SubmissionProblem {
   if (typeof payload !== 'object' || payload === null) {
-    return {};
+    return { code: null, detail: null };
   }
 
   const container = payload as Record<string, unknown>;
-  const properties = container['properties'];
-  const source =
-    container['errors'] ??
-    (typeof properties === 'object' && properties !== null
-      ? (properties as Record<string, unknown>)['errors']
-      : undefined);
+  const code = typeof container['code'] === 'string' ? container['code'] : null;
+  const detail = typeof container['detail'] === 'string' ? container['detail'] : null;
 
-  if (Array.isArray(source)) {
-    const collected: Record<string, string> = {};
-    for (const entry of source) {
-      if (typeof entry !== 'object' || entry === null) {
-        continue;
-      }
-      const item = entry as Record<string, unknown>;
-      const field = item['field'] ?? item['name'] ?? item['pointer'];
-      const message = item['message'] ?? item['detail'] ?? item['reason'];
-      if (typeof field === 'string' && typeof message === 'string') {
-        collected[field] = message;
-      }
-    }
-    return collected;
-  }
-
-  if (typeof source === 'object' && source !== null) {
-    const collected: Record<string, string> = {};
-    for (const [field, message] of Object.entries(source as Record<string, unknown>)) {
-      if (typeof message === 'string') {
-        collected[field] = message;
-      }
-    }
-    return collected;
-  }
-
-  return {};
+  return { code, detail };
 }
 
 /** Talks to the account-opening endpoints. */
@@ -124,7 +107,7 @@ export class SignupService {
       }
 
       if (error.status === UNPROCESSABLE) {
-        return { kind: 'invalid', fieldErrors: readFieldErrors(error.error) };
+        return { kind: 'invalid', problem: readProblem(error.error) };
       }
 
       return { kind: 'failed' };
