@@ -27,6 +27,8 @@
     <pitest.version>1.17.4</pitest.version>
     <pitest-junit5.version>1.2.3</pitest-junit5.version>
     <junit-platform.version>6.0.3</junit-platform.version>
+    <!-- Overrides spring-boot-starter-parent 4.1.0's managed version: CVE-2026-54291 (HIGH). -->
+    <postgresql.version>42.7.12</postgresql.version>
     <!-- Mutation floor for the modules that move money (docs/ARCHITECTURE.md §Testing). -->
     <pitest.mutation.minimum>60</pitest.mutation.minimum>
     <!-- Inherited floors (docs/ARCHITECTURE.md §Testing). -->
