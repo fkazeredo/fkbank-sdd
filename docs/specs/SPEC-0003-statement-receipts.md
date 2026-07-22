@@ -2,7 +2,7 @@
 id: SPEC-0003
 title: Statement and receipts
 slug: statement-receipts
-status: AWAITING_SPEC_APPROVAL
+status: IN_PROGRESS
 risk: R2
 profile: standard
 modules: [account, ledger]
@@ -13,8 +13,8 @@ reading_list:
   architecture: ["Backend", "Frontend"]
 planned_sprint: S2
 planned_release: null
-owner_approved_at: null
-owner_approved_hash: null
+owner_approved_at: "2026-07-21T20:22:41Z"
+owner_approved_hash: "19b882f9b25ec82e37effe42df57becff16efc156a0998de7d31391e43c14c76"
 ---
 
 # SPEC-0003 — Statement and receipts
@@ -62,4 +62,6 @@ endpoints · Screens: statement, receipt · Emulator: none
 
 Format: `DL-NNNN — YYYY-MM-DD — decision — decided by <owner|architecture|assumption>`
 
-_No entries yet._
+- DL-0001 — 2026-07-21 — `/deliver-spec 3` invocation is explicit owner approval of spec
+  content hash `19b882f9b25ec82e37effe42df57becff16efc156a0998de7d31391e43c14c76` — decided by
+  owner.

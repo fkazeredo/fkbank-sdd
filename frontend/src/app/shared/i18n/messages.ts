@@ -91,6 +91,33 @@ export const messages = {
   'account.loading': 'Loading your account...',
   'account.error': 'We could not load your account.',
   'account.retry': 'Try again',
+  'account.viewStatement': 'View statement',
+
+  // Statement: every posting, newest first.
+  'statement.title': 'Statement',
+  'statement.loading': 'Loading your statement...',
+  'statement.error': 'We could not load your statement.',
+  'statement.retry': 'Try again',
+  'statement.empty': 'No movements in this period.',
+  'statement.period.title': 'Period',
+  'statement.period.previous': 'Previous month',
+  'statement.period.next': 'Next month',
+  'statement.filter.all': 'All',
+  'statement.filter.in': 'In',
+  'statement.filter.out': 'Out',
+  'statement.loadMore': 'Load more',
+  'statement.runningBalance': 'Balance after',
+
+  // Receipt: the detail behind a single statement line.
+  'receipt.title': 'Receipt',
+  'receipt.loading': 'Loading the receipt...',
+  'receipt.error': 'We could not load this receipt.',
+  'receipt.retry': 'Try again',
+  'receipt.amount': 'Amount',
+  'receipt.date': 'Date',
+  'receipt.rail': 'Method',
+  'receipt.status': 'Status',
+  'receipt.counterparty': 'To/From',
 } as const;
 
 export type MessageKey = keyof typeof messages;

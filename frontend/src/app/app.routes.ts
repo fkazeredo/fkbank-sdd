@@ -33,6 +33,14 @@ export const routes: Routes = [
         path: 'account',
         loadComponent: () => import('./features/account/account').then((m) => m.Account),
       },
+      {
+        path: 'account/statement',
+        loadComponent: () => import('./features/statement/statement').then((m) => m.Statement),
+      },
+      {
+        path: 'account/statement/:postingId',
+        loadComponent: () => import('./features/statement/receipt').then((m) => m.Receipt),
+      },
       { path: 'pix', loadComponent: () => import('./features/pix/pix').then((m) => m.Pix) },
       { path: 'pay', loadComponent: () => import('./features/pay/pay').then((m) => m.Pay) },
       {

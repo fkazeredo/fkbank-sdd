@@ -1,0 +1,58 @@
+<section data-testid="feature-receipt" class="rounded-lg border border-slate-200 bg-white p-8">
+  <h1 class="text-xl font-semibold">{{ t('receipt.title') }}</h1>
+
+  @if (loading()) {
+    <p data-testid="receipt-loading" role="status" class="mt-6 text-slate-600">
+      {{ t('receipt.loading') }}
+    </p>
+  } @else if (failed()) {
+    <div class="mt-6">
+      <p
+        role="alert"
+        data-testid="receipt-error"
+        class="rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-800"
+      >
+        {{ t('receipt.error') }}
+      </p>
+      <button
+        type="button"
+        data-testid="receipt-retry"
+        class="mt-4 rounded border border-slate-300 px-4 py-2 font-medium hover:bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-600"
+        (click)="load()"
+      >
+        {{ t('receipt.retry') }}
+      </button>
+    </div>
+  } @else if (receipt(); as details) {
+    <dl class="mt-6 space-y-4 text-sm">
+      <div>
+        <dt class="text-slate-600">{{ t('receipt.amount') }}</dt>
+        <dd data-testid="receipt-amount" class="mt-1 text-2xl font-semibold tabular-nums">
+          {{ details.amount | money: details.currency }}
+        </dd>
+      </div>
+      <div>
+        <dt class="text-slate-600">{{ t('receipt.date') }}</dt>
+        <dd data-testid="receipt-date" class="mt-1 font-medium">
+          {{ details.occurredAt | date: 'medium' }}
+        </dd>
+      </div>
+      <div>
+        <dt class="text-slate-600">{{ t('receipt.rail') }}</dt>
+        <dd data-testid="receipt-rail" class="mt-1 font-medium">{{ details.rail }}</dd>
+      </div>
+      <div>
+        <dt class="text-slate-600">{{ t('receipt.status') }}</dt>
+        <dd data-testid="receipt-status" class="mt-1 font-medium">{{ details.status }}</dd>
+      </div>
+      @if (details.counterparty) {
+        <div>
+          <dt class="text-slate-600">{{ t('receipt.counterparty') }}</dt>
+          <dd data-testid="receipt-counterparty" class="mt-1 font-medium tabular-nums">
+            {{ details.counterparty }}
+          </dd>
+        </div>
+      }
+    </dl>
+  }
+</section>

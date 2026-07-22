@@ -6,6 +6,11 @@ section by `/release` Prepare. History is never deleted.
 
 ## [Unreleased]
 
+- SPEC-0003 — Statement and receipts: a keyset-paginated, read-only projection over the ledger
+  (newest-first, running balance derived over an account's full history, stable under
+  concurrent inserts), a period navigator, and a public receipt per movement showing amount,
+  rail, status and a masked counterparty CPF on peer transfers.
+
 ## [0.1.0] - 2026-07-20
 
 First internal pilot / pre-release. Walking skeleton observable from day one, the accounting

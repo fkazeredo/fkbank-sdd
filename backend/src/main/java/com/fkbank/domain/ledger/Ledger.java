@@ -1,6 +1,7 @@
 package com.fkbank.domain.ledger;
 
 import java.time.Clock;
+import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -125,6 +126,52 @@ public class Ledger {
   /** Looks up a movement that was recorded. */
   public Optional<Posting> findPosting(PostingId id) {
     return postings.findById(id);
+  }
+
+  /**
+   * The chart-of-accounts code an account is known by.
+   *
+   * <p>Lets another module recognise what an account represents — a customer's own balance,
+   * another customer's, or an internal settlement/expense/credit account — without that module
+   * keeping its own copy of the chart of accounts.
+   */
+  public Optional<String> codeOf(AccountId accountId) {
+    return accounts.findById(accountId).map(Account::code);
+  }
+
+  /**
+   * The account registered under a chart-of-accounts code.
+   *
+   * @throws UnknownAccountException if no account carries that code
+   */
+  public AccountId accountIdOf(String accountCode) {
+    return accounts
+        .findByCode(accountCode)
+        .map(Account::id)
+        .orElseThrow(() -> UnknownAccountException.withCode(accountCode));
+  }
+
+  /** Whether a contra-posting already exists for this movement. */
+  public boolean isReversed(PostingId id) {
+    return postings.existsReversalOf(id);
+  }
+
+  /**
+   * One account's statement. See {@link PostingRepository#statementOf}.
+   *
+   * @throws UnknownAccountException if no account carries this id
+   */
+  public List<PostingLine> statementOf(
+      AccountId accountId,
+      Instant from,
+      Instant to,
+      Direction direction,
+      Instant cursorOccurredAt,
+      PostingId cursorPostingId,
+      int limit) {
+    requireExists(accountId);
+    return postings.statementOf(
+        accountId, from, to, direction, cursorOccurredAt, cursorPostingId, limit);
   }
 
   /**

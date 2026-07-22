@@ -78,6 +78,28 @@ e cada área passa a funcionar de verdade quando sua funcionalidade for entregue
 Você consegue percorrer todo o aplicativo pelo teclado: `Tab` move entre os campos e as entradas
 da navegação, e `Enter` confirma ou abre a que estiver destacada.
 
+## Seu extrato e seus comprovantes
+
+Na área Account, escolha **Ver extrato** para conferir todas as movimentações das quais sua conta
+participou.
+
+- **Mais recentes primeiro.** Cada linha mostra o que se moveu, se entrou ou saiu, e qual era seu
+  saldo logo depois daquela linha — o saldo da linha mais recente sempre corresponde ao que sua
+  conta mostra hoje.
+- **Navegue entre os meses.** O extrato abre no mês atual; as setas ao lado do nome do mês movem
+  para um mês anterior ou posterior (nunca além do mês atual).
+- **Filtre por direção.** Mostre tudo, só o que entrou, ou só o que saiu.
+- **Carregar mais.** Dentro do mês que você está vendo, escolha **Carregar mais** para ver linhas
+  mais antigas daquele mesmo mês. Nada que você já viu se repete ou é pulado, mesmo que uma
+  movimentação nova chegue enquanto você ainda está percorrendo linhas mais antigas.
+- **Abra um comprovante.** Escolha qualquer linha para ver seu comprovante: o valor, quando
+  aconteceu, por qual canal passou, se ainda vale ou foi corrigida e — no caso de uma transferência
+  entre dois clientes FKBANK — o CPF da outra pessoa, com os dígitos do meio ocultos
+  (`***.456.789-**`).
+
+Um comprovante é a prova de uma movimentação específica. Ninguém mais consegue abrir o seu: um
+comprovante só abre para uma das duas contas que de fato participaram daquela movimentação.
+
 ## Saindo da conta
 
 Escolha **Sair** na barra superior. Sua sessão é descartada imediatamente e você volta à tela de

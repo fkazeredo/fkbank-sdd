@@ -75,6 +75,28 @@ when its feature ships.
 You can move through the whole application with the keyboard: `Tab` moves between fields and
 navigation entries, and `Enter` confirms or opens the highlighted one.
 
+## Your statement and receipts
+
+From the Account area, choose **View statement** to see every movement your account has been
+part of.
+
+- **Newest first.** Each line shows what moved, whether it came in or went out, and what your
+  balance was right after that line — the top line's balance always matches what your account
+  shows today.
+- **Move between months.** The statement opens on the current month; the arrows beside the month
+  name move to an earlier or a later one (never past the current month).
+- **Filter by direction.** Show everything, only money that came in, or only money that went out.
+- **Load more.** Within the month you are looking at, choose **Load more** to see older lines from
+  that same month. Nothing you already saw is repeated or skipped, even if a new movement lands
+  while you are still paging through older ones.
+- **Open a receipt.** Choose any line to see its receipt: the amount, when it happened, which
+  channel it travelled by, whether it still stands or was corrected, and — for a transfer between
+  two FKBANK customers — the other person's CPF, shown with the middle digits hidden
+  (`***.456.789-**`).
+
+A receipt is proof of one specific movement. Nobody else can open yours: a receipt only opens for
+one of the two accounts actually party to that movement.
+
 ## Signing out
 
 Select **Sign out** in the top bar. Your session is discarded immediately and you return to the

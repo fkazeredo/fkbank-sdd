@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { MoneyPipe } from '../../shared/ui/money.pipe';
 import { t } from '../../shared/i18n/messages';
 import { AccountService, AccountSummary } from './account.service';
@@ -11,7 +12,7 @@ import { AccountService, AccountSummary } from './account.service';
  */
 @Component({
   selector: 'fk-account',
-  imports: [MoneyPipe],
+  imports: [MoneyPipe, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './account.html',
 })

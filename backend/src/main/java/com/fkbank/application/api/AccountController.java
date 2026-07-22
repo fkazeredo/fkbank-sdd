@@ -1,9 +1,6 @@
 package com.fkbank.application.api;
 
 import com.fkbank.domain.account.CurrentAccounts;
-import com.fkbank.domain.customer.CustomerId;
-import com.fkbank.domain.identity.CredentialRepository;
-import com.fkbank.domain.identity.Username;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -25,11 +22,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class AccountController {
 
   private final CurrentAccounts accounts;
-  private final CredentialRepository credentials;
+  private final AuthenticatedCaller caller;
 
-  AccountController(CurrentAccounts accounts, CredentialRepository credentials) {
+  AccountController(CurrentAccounts accounts, AuthenticatedCaller caller) {
     this.accounts = accounts;
-    this.credentials = credentials;
+    this.caller = caller;
   }
 
   /**
@@ -51,27 +48,6 @@ public class AccountController {
   })
   @GetMapping(value = "/me", produces = MediaType.APPLICATION_JSON_VALUE)
   public AccountResponse me(@AuthenticationPrincipal Jwt jwt) {
-    return AccountResponse.of(accounts.summaryOf(callerOf(jwt)));
-  }
-
-  /**
-   * Works out which customer the token belongs to.
-   *
-   * <p>The token's subject is the name someone signed in with, so the credential is what links
-   * it to a person. Matching the subject against registration data instead would put that link
-   * in two places, and a later change to what a username may be would quietly repoint balances.
-   *
-   * <p>A validated token whose credential has since disappeared is a contradiction rather than a
-   * client error: the token was issued against that credential. It fails loudly instead of
-   * being answered with somebody else's account or an empty one.
-   */
-  private CustomerId callerOf(Jwt jwt) {
-    Username username = Username.of(jwt.getSubject());
-    return credentials
-        .findByUsername(username)
-        .map(credential -> CustomerId.of(credential.ownerId()))
-        .orElseThrow(
-            () ->
-                new IllegalStateException("the signed-in principal has no credential on record"));
+    return AccountResponse.of(accounts.summaryOf(caller.resolve(jwt)));
   }
 }
